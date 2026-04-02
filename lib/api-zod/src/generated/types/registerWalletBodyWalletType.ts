@@ -13,4 +13,5 @@ export const RegisterWalletBodyWalletType = {
   temple: "temple",
   beacon: "beacon",
   metamask: "metamask",
+  tronlink: "tronlink",
 } as const;

@@ -122,8 +122,8 @@ export const GetTransactionSummaryResponse = zod.object({
  */
 export const RegisterWalletBody = zod.object({
   walletAddress: zod.string(),
-  network: zod.enum(["tezos", "ethereum"]),
-  walletType: zod.enum(["temple", "beacon", "metamask"]),
+  network: zod.enum(["tezos", "ethereum", "tron", "bnb"]),
+  walletType: zod.enum(["temple", "beacon", "metamask", "tronlink"]),
 });
 
 export const RegisterWalletResponse = zod.object({

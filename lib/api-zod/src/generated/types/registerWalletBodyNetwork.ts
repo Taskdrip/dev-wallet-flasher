@@ -12,4 +12,6 @@ export type RegisterWalletBodyNetwork =
 export const RegisterWalletBodyNetwork = {
   tezos: "tezos",
   ethereum: "ethereum",
+  tron: "tron",
+  bnb: "bnb",
 } as const;

@@ -603,10 +603,10 @@ components:
           type: string
         network:
           type: string
-          enum: [tezos, ethereum]
+          enum: [tezos, ethereum, tron, bnb]
         walletType:
           type: string
-          enum: [temple, beacon, metamask]
+          enum: [temple, beacon, metamask, tronlink]
       required:
         - walletAddress
         - network

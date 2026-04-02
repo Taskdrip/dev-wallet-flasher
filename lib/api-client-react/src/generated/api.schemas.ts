@@ -137,6 +137,8 @@ export type RegisterWalletBodyNetwork =
 export const RegisterWalletBodyNetwork = {
   tezos: "tezos",
   ethereum: "ethereum",
+  tron: "tron",
+  bnb: "bnb",
 } as const;
 
 export type RegisterWalletBodyWalletType =
@@ -146,6 +148,7 @@ export const RegisterWalletBodyWalletType = {
   temple: "temple",
   beacon: "beacon",
   metamask: "metamask",
+  tronlink: "tronlink",
 } as const;
 
 export interface RegisterWalletBody {

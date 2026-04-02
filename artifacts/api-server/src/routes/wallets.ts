@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { walletsTable } from "@workspace/db/schema";
 import { RegisterWalletBody, GetWalletParams, GetWalletQueryParams } from "@workspace/api-zod";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 
 const router: IRouter = Router();
 
