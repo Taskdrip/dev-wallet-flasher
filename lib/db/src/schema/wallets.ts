@@ -10,6 +10,7 @@ export const walletsTable = pgTable("wallets", {
   usdtzSimBalance: numeric("usdtz_sim_balance", { precision: 20, scale: 6 }).notNull().default("0"),
   usdtSimBalance: numeric("usdt_sim_balance", { precision: 20, scale: 6 }).notNull().default("0"),
   isFrozen: boolean("is_frozen").notNull().default(false),
+  autoAccumulate: boolean("auto_accumulate").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   lastSeenAt: timestamp("last_seen_at").notNull().defaultNow(),
 });

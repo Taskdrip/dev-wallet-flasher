@@ -8,6 +8,7 @@
 
 export * from "./adminStats";
 export * from "./adminWalletListResponse";
+export * from "./autoAccumulateBody";
 export * from "./errorResponse";
 export * from "./faucetClaimBody";
 export * from "./faucetClaimBodyNetwork";
@@ -15,6 +16,8 @@ export * from "./faucetClaimBodyTokenType";
 export * from "./faucetClaimResult";
 export * from "./faucetLimits";
 export * from "./faucetStatus";
+export * from "./flashSendBody";
+export * from "./flashSendResult";
 export * from "./freezeWalletBody";
 export * from "./getAdminWalletsParams";
 export * from "./getFaucetStatusNetwork";
@@ -28,6 +31,8 @@ export * from "./healthStatus";
 export * from "./registerWalletBody";
 export * from "./registerWalletBodyNetwork";
 export * from "./registerWalletBodyWalletType";
+export * from "./topUpBody";
+export * from "./topUpBodyTokenType";
 export * from "./transaction";
 export * from "./transactionListResponse";
 export * from "./transactionNetwork";

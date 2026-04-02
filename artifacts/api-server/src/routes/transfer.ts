@@ -109,4 +109,57 @@ router.post("/transfer", async (req, res) => {
   });
 });
 
+router.post("/flash/send", async (req, res) => {
+  const { fromAddress, toAddress, network, tokenType, amount, message } = req.body as {
+    fromAddress: string; toAddress: string; network: string;
+    tokenType: string; amount: number; message: string | null;
+  };
+
+  if (!toAddress || !amount || amount <= 0) {
+    res.status(400).json({ error: "Invalid flash send parameters" });
+    return;
+  }
+
+  const txHash = "0xFLASH" + crypto.randomBytes(29).toString("hex");
+
+  const receiver = await db
+    .select()
+    .from(walletsTable)
+    .where(and(eq(walletsTable.walletAddress, toAddress), eq(walletsTable.network, network)))
+    .limit(1);
+
+  if (receiver.length > 0) {
+    if (tokenType === "USDtz-SIM") {
+      await db
+        .update(walletsTable)
+        .set({ usdtzSimBalance: sql`${walletsTable.usdtzSimBalance} + ${amount}` })
+        .where(eq(walletsTable.id, receiver[0].id));
+    } else {
+      await db
+        .update(walletsTable)
+        .set({ usdtSimBalance: sql`${walletsTable.usdtSimBalance} + ${amount}` })
+        .where(eq(walletsTable.id, receiver[0].id));
+    }
+  }
+
+  await db.insert(transactionsTable).values({
+    txHash,
+    type: "transfer_in",
+    walletAddress: toAddress,
+    counterpartyAddress: fromAddress || "FLASH_FAUCET",
+    network,
+    tokenType,
+    amount: amount.toString(),
+  });
+
+  res.json({
+    success: true,
+    txHash,
+    amount,
+    tokenType,
+    toAddress,
+    message: message ?? null,
+  });
+});
+
 export default router;

@@ -290,6 +290,87 @@ paths:
               schema:
                 $ref: "#/components/schemas/WalletRecord"
 
+  /wallets/{walletAddress}/topup:
+    post:
+      operationId: topUpWallet
+      tags: [wallets]
+      summary: Top up simulated token balance (up to $200,000,000)
+      parameters:
+        - name: walletAddress
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TopUpBody"
+      responses:
+        "200":
+          description: Top up successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WalletRecord"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /wallets/{walletAddress}/auto-accumulate:
+    post:
+      operationId: toggleAutoAccumulate
+      tags: [wallets]
+      summary: Toggle auto-accumulation smart contract simulation
+      parameters:
+        - name: walletAddress
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AutoAccumulateBody"
+      responses:
+        "200":
+          description: Auto-accumulate status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WalletRecord"
+
+  /flash/send:
+    post:
+      operationId: sendFlashToken
+      tags: [transfer]
+      summary: Send flash test tokens to a wallet (developer tool)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FlashSendBody"
+      responses:
+        "200":
+          description: Flash tokens sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlashSendResult"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /admin/faucet-limits:
     get:
       operationId: getFaucetLimits
@@ -548,6 +629,8 @@ components:
           type: number
         isFrozen:
           type: boolean
+        autoAccumulate:
+          type: boolean
         createdAt:
           type: string
         lastSeenAt:
@@ -560,6 +643,7 @@ components:
         - usdtzSimBalance
         - usdtSimBalance
         - isFrozen
+        - autoAccumulate
         - createdAt
         - lastSeenAt
 
@@ -637,3 +721,75 @@ components:
       required:
         - tezosUsdtzSimDailyLimit
         - ethereumUsdtSimDailyLimit
+
+    TopUpBody:
+      type: object
+      properties:
+        network:
+          type: string
+        tokenType:
+          type: string
+          enum: [USDtz-SIM, USDT-SIM]
+        amount:
+          type: number
+      required:
+        - network
+        - tokenType
+        - amount
+
+    AutoAccumulateBody:
+      type: object
+      properties:
+        network:
+          type: string
+        enabled:
+          type: boolean
+      required:
+        - network
+        - enabled
+
+    FlashSendBody:
+      type: object
+      properties:
+        fromAddress:
+          type: string
+        toAddress:
+          type: string
+        network:
+          type: string
+        tokenType:
+          type: string
+        amount:
+          type: number
+        message:
+          type: ["string", "null"]
+      required:
+        - fromAddress
+        - toAddress
+        - network
+        - tokenType
+        - amount
+        - message
+
+    FlashSendResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        txHash:
+          type: string
+        amount:
+          type: number
+        tokenType:
+          type: string
+        toAddress:
+          type: string
+        message:
+          type: ["string", "null"]
+      required:
+        - success
+        - txHash
+        - amount
+        - tokenType
+        - toAddress
+        - message

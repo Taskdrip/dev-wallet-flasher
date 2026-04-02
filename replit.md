@@ -2,7 +2,7 @@
 
 ## Overview
 
-pnpm workspace monorepo using TypeScript. Dev Wallet Connector — a full-stack Web3 app for connecting wallets (Tezos/Ethereum testnets) and interacting with simulated test tokens.
+pnpm workspace monorepo using TypeScript. Dev Wallet Connector v1.0.0 — a full-stack multi-chain Web3 developer tool for connecting wallets (Ethereum/BNB/Tron/Tezos testnets) and interacting with simulated test tokens (USDT-SIM, USDtz-SIM). Features: faucet, token transfers, transaction history, admin panel, top-up (up to $200M), auto-accumulation toggle, flash test token sender, and step-by-step instructions guide.
 
 ## Stack
 

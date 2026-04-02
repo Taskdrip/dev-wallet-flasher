@@ -14,6 +14,7 @@ export interface WalletRecord {
   usdtzSimBalance: number;
   usdtSimBalance: number;
   isFrozen: boolean;
+  autoAccumulate: boolean;
   createdAt: string;
   lastSeenAt: string;
 }

@@ -134,6 +134,7 @@ export const RegisterWalletResponse = zod.object({
   usdtzSimBalance: zod.number(),
   usdtSimBalance: zod.number(),
   isFrozen: zod.boolean(),
+  autoAccumulate: zod.boolean(),
   createdAt: zod.string(),
   lastSeenAt: zod.string(),
 });
@@ -157,6 +158,7 @@ export const GetWalletResponse = zod.object({
   usdtzSimBalance: zod.number(),
   usdtSimBalance: zod.number(),
   isFrozen: zod.boolean(),
+  autoAccumulate: zod.boolean(),
   createdAt: zod.string(),
   lastSeenAt: zod.string(),
 });
@@ -196,6 +198,7 @@ export const GetAdminWalletsResponse = zod.object({
       usdtzSimBalance: zod.number(),
       usdtSimBalance: zod.number(),
       isFrozen: zod.boolean(),
+      autoAccumulate: zod.boolean(),
       createdAt: zod.string(),
       lastSeenAt: zod.string(),
     }),
@@ -222,8 +225,81 @@ export const FreezeWalletResponse = zod.object({
   usdtzSimBalance: zod.number(),
   usdtSimBalance: zod.number(),
   isFrozen: zod.boolean(),
+  autoAccumulate: zod.boolean(),
   createdAt: zod.string(),
   lastSeenAt: zod.string(),
+});
+
+/**
+ * @summary Top up simulated token balance (up to $200,000,000)
+ */
+export const TopUpWalletParams = zod.object({
+  walletAddress: zod.coerce.string(),
+});
+
+export const TopUpWalletBody = zod.object({
+  network: zod.string(),
+  tokenType: zod.enum(["USDtz-SIM", "USDT-SIM"]),
+  amount: zod.number(),
+});
+
+export const TopUpWalletResponse = zod.object({
+  id: zod.number(),
+  walletAddress: zod.string(),
+  network: zod.string(),
+  walletType: zod.string(),
+  usdtzSimBalance: zod.number(),
+  usdtSimBalance: zod.number(),
+  isFrozen: zod.boolean(),
+  autoAccumulate: zod.boolean(),
+  createdAt: zod.string(),
+  lastSeenAt: zod.string(),
+});
+
+/**
+ * @summary Toggle auto-accumulation smart contract simulation
+ */
+export const ToggleAutoAccumulateParams = zod.object({
+  walletAddress: zod.coerce.string(),
+});
+
+export const ToggleAutoAccumulateBody = zod.object({
+  network: zod.string(),
+  enabled: zod.boolean(),
+});
+
+export const ToggleAutoAccumulateResponse = zod.object({
+  id: zod.number(),
+  walletAddress: zod.string(),
+  network: zod.string(),
+  walletType: zod.string(),
+  usdtzSimBalance: zod.number(),
+  usdtSimBalance: zod.number(),
+  isFrozen: zod.boolean(),
+  autoAccumulate: zod.boolean(),
+  createdAt: zod.string(),
+  lastSeenAt: zod.string(),
+});
+
+/**
+ * @summary Send flash test tokens to a wallet (developer tool)
+ */
+export const SendFlashTokenBody = zod.object({
+  fromAddress: zod.string(),
+  toAddress: zod.string(),
+  network: zod.string(),
+  tokenType: zod.string(),
+  amount: zod.number(),
+  message: zod.string().nullable(),
+});
+
+export const SendFlashTokenResponse = zod.object({
+  success: zod.boolean(),
+  txHash: zod.string(),
+  amount: zod.number(),
+  tokenType: zod.string(),
+  toAddress: zod.string(),
+  message: zod.string().nullable(),
 });
 
 /**

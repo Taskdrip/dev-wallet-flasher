@@ -12,6 +12,8 @@ import Faucet from "@/pages/faucet";
 import Transfer from "@/pages/transfer";
 import Transactions from "@/pages/transactions";
 import Admin from "@/pages/admin";
+import Flash from "@/pages/flash";
+import Guide from "@/pages/guide";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -25,6 +27,8 @@ function Router() {
       <Route path="/transfer" component={Transfer} />
       <Route path="/transactions" component={Transactions} />
       <Route path="/admin" component={Admin} />
+      <Route path="/flash" component={Flash} />
+      <Route path="/guide" component={Guide} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -162,6 +162,7 @@ export interface WalletRecord {
   usdtzSimBalance: number;
   usdtSimBalance: number;
   isFrozen: boolean;
+  autoAccumulate: boolean;
   createdAt: string;
   lastSeenAt: string;
 }
@@ -195,6 +196,45 @@ export interface FaucetLimits {
 export interface UpdateFaucetLimitsBody {
   tezosUsdtzSimDailyLimit: number;
   ethereumUsdtSimDailyLimit: number;
+}
+
+export type TopUpBodyTokenType =
+  (typeof TopUpBodyTokenType)[keyof typeof TopUpBodyTokenType];
+
+export const TopUpBodyTokenType = {
+  "USDtz-SIM": "USDtz-SIM",
+  "USDT-SIM": "USDT-SIM",
+} as const;
+
+export interface TopUpBody {
+  network: string;
+  tokenType: TopUpBodyTokenType;
+  amount: number;
+}
+
+export interface AutoAccumulateBody {
+  network: string;
+  enabled: boolean;
+}
+
+export interface FlashSendBody {
+  fromAddress: string;
+  toAddress: string;
+  network: string;
+  tokenType: string;
+  amount: number;
+  /** @nullable */
+  message: string | null;
+}
+
+export interface FlashSendResult {
+  success: boolean;
+  txHash: string;
+  amount: number;
+  tokenType: string;
+  toAddress: string;
+  /** @nullable */
+  message: string | null;
 }
 
 export type GetFaucetStatusParams = {

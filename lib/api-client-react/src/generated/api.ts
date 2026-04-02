@@ -19,11 +19,14 @@ import type {
 import type {
   AdminStats,
   AdminWalletListResponse,
+  AutoAccumulateBody,
   ErrorResponse,
   FaucetClaimBody,
   FaucetClaimResult,
   FaucetLimits,
   FaucetStatus,
+  FlashSendBody,
+  FlashSendResult,
   FreezeWalletBody,
   GetAdminWalletsParams,
   GetFaucetStatusParams,
@@ -32,6 +35,7 @@ import type {
   GetWalletParams,
   HealthStatus,
   RegisterWalletBody,
+  TopUpBody,
   TransactionListResponse,
   TransactionSummary,
   TransferBody,
@@ -1035,6 +1039,266 @@ export const useFreezeWallet = <
   TContext
 > => {
   return useMutation(getFreezeWalletMutationOptions(options));
+};
+
+/**
+ * @summary Top up simulated token balance (up to $200,000,000)
+ */
+export const getTopUpWalletUrl = (walletAddress: string) => {
+  return `/api/wallets/${walletAddress}/topup`;
+};
+
+export const topUpWallet = async (
+  walletAddress: string,
+  topUpBody: TopUpBody,
+  options?: RequestInit,
+): Promise<WalletRecord> => {
+  return customFetch<WalletRecord>(getTopUpWalletUrl(walletAddress), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(topUpBody),
+  });
+};
+
+export const getTopUpWalletMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof topUpWallet>>,
+    TError,
+    { walletAddress: string; data: BodyType<TopUpBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof topUpWallet>>,
+  TError,
+  { walletAddress: string; data: BodyType<TopUpBody> },
+  TContext
+> => {
+  const mutationKey = ["topUpWallet"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof topUpWallet>>,
+    { walletAddress: string; data: BodyType<TopUpBody> }
+  > = (props) => {
+    const { walletAddress, data } = props ?? {};
+
+    return topUpWallet(walletAddress, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type TopUpWalletMutationResult = NonNullable<
+  Awaited<ReturnType<typeof topUpWallet>>
+>;
+export type TopUpWalletMutationBody = BodyType<TopUpBody>;
+export type TopUpWalletMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Top up simulated token balance (up to $200,000,000)
+ */
+export const useTopUpWallet = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof topUpWallet>>,
+    TError,
+    { walletAddress: string; data: BodyType<TopUpBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof topUpWallet>>,
+  TError,
+  { walletAddress: string; data: BodyType<TopUpBody> },
+  TContext
+> => {
+  return useMutation(getTopUpWalletMutationOptions(options));
+};
+
+/**
+ * @summary Toggle auto-accumulation smart contract simulation
+ */
+export const getToggleAutoAccumulateUrl = (walletAddress: string) => {
+  return `/api/wallets/${walletAddress}/auto-accumulate`;
+};
+
+export const toggleAutoAccumulate = async (
+  walletAddress: string,
+  autoAccumulateBody: AutoAccumulateBody,
+  options?: RequestInit,
+): Promise<WalletRecord> => {
+  return customFetch<WalletRecord>(getToggleAutoAccumulateUrl(walletAddress), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(autoAccumulateBody),
+  });
+};
+
+export const getToggleAutoAccumulateMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof toggleAutoAccumulate>>,
+    TError,
+    { walletAddress: string; data: BodyType<AutoAccumulateBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof toggleAutoAccumulate>>,
+  TError,
+  { walletAddress: string; data: BodyType<AutoAccumulateBody> },
+  TContext
+> => {
+  const mutationKey = ["toggleAutoAccumulate"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof toggleAutoAccumulate>>,
+    { walletAddress: string; data: BodyType<AutoAccumulateBody> }
+  > = (props) => {
+    const { walletAddress, data } = props ?? {};
+
+    return toggleAutoAccumulate(walletAddress, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ToggleAutoAccumulateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof toggleAutoAccumulate>>
+>;
+export type ToggleAutoAccumulateMutationBody = BodyType<AutoAccumulateBody>;
+export type ToggleAutoAccumulateMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Toggle auto-accumulation smart contract simulation
+ */
+export const useToggleAutoAccumulate = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof toggleAutoAccumulate>>,
+    TError,
+    { walletAddress: string; data: BodyType<AutoAccumulateBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof toggleAutoAccumulate>>,
+  TError,
+  { walletAddress: string; data: BodyType<AutoAccumulateBody> },
+  TContext
+> => {
+  return useMutation(getToggleAutoAccumulateMutationOptions(options));
+};
+
+/**
+ * @summary Send flash test tokens to a wallet (developer tool)
+ */
+export const getSendFlashTokenUrl = () => {
+  return `/api/flash/send`;
+};
+
+export const sendFlashToken = async (
+  flashSendBody: FlashSendBody,
+  options?: RequestInit,
+): Promise<FlashSendResult> => {
+  return customFetch<FlashSendResult>(getSendFlashTokenUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(flashSendBody),
+  });
+};
+
+export const getSendFlashTokenMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendFlashToken>>,
+    TError,
+    { data: BodyType<FlashSendBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof sendFlashToken>>,
+  TError,
+  { data: BodyType<FlashSendBody> },
+  TContext
+> => {
+  const mutationKey = ["sendFlashToken"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof sendFlashToken>>,
+    { data: BodyType<FlashSendBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return sendFlashToken(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SendFlashTokenMutationResult = NonNullable<
+  Awaited<ReturnType<typeof sendFlashToken>>
+>;
+export type SendFlashTokenMutationBody = BodyType<FlashSendBody>;
+export type SendFlashTokenMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Send flash test tokens to a wallet (developer tool)
+ */
+export const useSendFlashToken = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendFlashToken>>,
+    TError,
+    { data: BodyType<FlashSendBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof sendFlashToken>>,
+  TError,
+  { data: BodyType<FlashSendBody> },
+  TContext
+> => {
+  return useMutation(getSendFlashTokenMutationOptions(options));
 };
 
 /**

@@ -71,6 +71,75 @@ router.get("/wallets/:walletAddress", async (req, res) => {
   res.json(formatWallet(wallet[0]));
 });
 
+const MAX_TOPUP = 200_000_000;
+
+router.post("/wallets/:walletAddress/topup", async (req, res) => {
+  const { walletAddress } = req.params;
+  const { network, tokenType, amount } = req.body as { network: string; tokenType: string; amount: number };
+
+  if (!amount || amount <= 0 || amount > MAX_TOPUP) {
+    res.status(400).json({ error: `Amount must be between 1 and ${MAX_TOPUP.toLocaleString()}` });
+    return;
+  }
+
+  const existing = await db
+    .select()
+    .from(walletsTable)
+    .where(and(eq(walletsTable.walletAddress, walletAddress), eq(walletsTable.network, network)))
+    .limit(1);
+
+  if (existing.length === 0) {
+    res.status(404).json({ error: "Wallet not found. Connect your wallet first." });
+    return;
+  }
+
+  if (existing[0].isFrozen) {
+    res.status(400).json({ error: "Wallet is frozen" });
+    return;
+  }
+
+  let updated;
+  if (tokenType === "USDtz-SIM") {
+    updated = await db
+      .update(walletsTable)
+      .set({ usdtzSimBalance: sql`${walletsTable.usdtzSimBalance} + ${amount}`, lastSeenAt: new Date() })
+      .where(eq(walletsTable.id, existing[0].id))
+      .returning();
+  } else {
+    updated = await db
+      .update(walletsTable)
+      .set({ usdtSimBalance: sql`${walletsTable.usdtSimBalance} + ${amount}`, lastSeenAt: new Date() })
+      .where(eq(walletsTable.id, existing[0].id))
+      .returning();
+  }
+
+  res.json(formatWallet(updated[0]));
+});
+
+router.post("/wallets/:walletAddress/auto-accumulate", async (req, res) => {
+  const { walletAddress } = req.params;
+  const { network, enabled } = req.body as { network: string; enabled: boolean };
+
+  const existing = await db
+    .select()
+    .from(walletsTable)
+    .where(and(eq(walletsTable.walletAddress, walletAddress), eq(walletsTable.network, network)))
+    .limit(1);
+
+  if (existing.length === 0) {
+    res.status(404).json({ error: "Wallet not found" });
+    return;
+  }
+
+  const updated = await db
+    .update(walletsTable)
+    .set({ autoAccumulate: enabled, lastSeenAt: new Date() })
+    .where(eq(walletsTable.id, existing[0].id))
+    .returning();
+
+  res.json(formatWallet(updated[0]));
+});
+
 function formatWallet(w: typeof walletsTable.$inferSelect) {
   return {
     id: w.id,
@@ -80,6 +149,7 @@ function formatWallet(w: typeof walletsTable.$inferSelect) {
     usdtzSimBalance: parseFloat(w.usdtzSimBalance ?? "0"),
     usdtSimBalance: parseFloat(w.usdtSimBalance ?? "0"),
     isFrozen: w.isFrozen,
+    autoAccumulate: w.autoAccumulate,
     createdAt: w.createdAt.toISOString(),
     lastSeenAt: w.lastSeenAt.toISOString(),
   };
