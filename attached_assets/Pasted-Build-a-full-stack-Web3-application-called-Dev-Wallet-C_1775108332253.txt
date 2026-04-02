@@ -1,0 +1,112 @@
+Build a full-stack Web3 application called “Dev Wallet Connector” that allows users to securely connect their wallets for testing stablecoin simulations.
+
+🎯 OBJECTIVE
+
+Create a secure web app that:
+
+Allows users to connect wallets (NOT import via seed phrase)
+Supports Tezos and Ethereum testnets
+Displays balances and allows test token interactions
+Includes admin-controlled simulated token system
+⚠️ STRICT SECURITY RULES
+DO NOT allow seed phrase or private key input
+DO NOT store any wallet credentials
+All wallet interactions must happen via wallet providers
+🔌 WALLET CONNECTION
+Tezos Integration:
+
+Use:
+
+Temple Wallet
+Beacon Wallet SDK
+Taquito
+
+Features:
+
+“Connect Wallet” button
+Request permissions
+Fetch user wallet address
+Display XTZ + token balances
+Ethereum Integration:
+
+Use:
+
+MetaMask
+ethers.js
+
+Features:
+
+Connect MetaMask
+Display wallet address
+Show ETH + USDT (testnet) balances
+💻 FRONTEND (Next.js + Tailwind)
+
+Build a clean dashboard:
+
+Home Page
+Connect Wallet buttons:
+“Connect Temple Wallet”
+“Connect MetaMask”
+Dashboard
+Wallet Info
+Wallet address
+Network (Tezos / Ethereum)
+Balance Display
+XTZ / ETH
+USDtz-SIM / USDT test tokens
+Actions
+Request test tokens (faucet)
+Send test tokens
+🪙 TEST TOKEN SYSTEM
+
+Create simulated tokens:
+
+USDtz-SIM (Tezos FA2)
+USDT-SIM (EVM mock token)
+
+Features:
+
+Faucet (daily limit)
+Transfer between users
+🔐 BACKEND (Node.js + Express)
+
+API:
+
+POST /faucet/claim
+POST /transfer
+GET /transactions
+
+Responsibilities:
+
+Track transactions (MongoDB)
+Enforce faucet limits
+Log activity
+👑 ADMIN PANEL
+
+Features:
+
+Set faucet limits
+View total distributed tokens
+Monitor users
+Freeze abusive wallets
+🎨 UI FEATURES
+Modern fintech dashboard
+Dark/light mode
+Mobile responsive
+⚠️ DISCLAIMER (REQUIRED)
+
+Display:
+
+“This application does NOT store or access private keys. All wallet connections are handled securely via wallet providers.”
+
+🚀 DEPLOYMENT
+Frontend → Vercel
+Backend → Railway
+Database → MongoDB Atlas
+🎯 FINAL RESULT
+
+A secure Web3 wallet connector app that:
+
+Allows safe wallet interaction
+Supports test token simulation
+Follows best practices used by real dApps

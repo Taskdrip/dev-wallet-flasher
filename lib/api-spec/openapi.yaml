@@ -1,15 +1,24 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Dev Wallet Connector API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: faucet
+    description: Test token faucet operations
+  - name: transfer
+    description: Token transfer operations
+  - name: transactions
+    description: Transaction history
+  - name: wallets
+    description: Wallet registry and balances
+  - name: admin
+    description: Admin panel operations
 paths:
   /healthz:
     get:
@@ -24,6 +33,293 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /faucet/claim:
+    post:
+      operationId: claimFaucet
+      tags: [faucet]
+      summary: Claim test tokens from faucet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FaucetClaimBody"
+      responses:
+        "200":
+          description: Tokens claimed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FaucetClaimResult"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Daily limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /faucet/status:
+    get:
+      operationId: getFaucetStatus
+      tags: [faucet]
+      summary: Get faucet status for a wallet
+      parameters:
+        - name: walletAddress
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: network
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [tezos, ethereum]
+      responses:
+        "200":
+          description: Faucet status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FaucetStatus"
+
+  /transfer:
+    post:
+      operationId: transferTokens
+      tags: [transfer]
+      summary: Transfer simulated tokens to another wallet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransferBody"
+      responses:
+        "200":
+          description: Transfer successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransferResult"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /transactions:
+    get:
+      operationId: getTransactions
+      tags: [transactions]
+      summary: Get transaction history for a wallet
+      parameters:
+        - name: walletAddress
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: network
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [tezos, ethereum]
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Transaction list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionListResponse"
+
+  /transactions/summary:
+    get:
+      operationId: getTransactionSummary
+      tags: [transactions]
+      summary: Get summary stats for a wallet
+      parameters:
+        - name: walletAddress
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: network
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Transaction summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionSummary"
+
+  /wallets/register:
+    post:
+      operationId: registerWallet
+      tags: [wallets]
+      summary: Register a connected wallet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterWalletBody"
+      responses:
+        "200":
+          description: Wallet registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WalletRecord"
+
+  /wallets/{walletAddress}:
+    get:
+      operationId: getWallet
+      tags: [wallets]
+      summary: Get wallet info and simulated balances
+      parameters:
+        - name: walletAddress
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: network
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [tezos, ethereum]
+      responses:
+        "200":
+          description: Wallet info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WalletRecord"
+        "404":
+          description: Wallet not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/stats:
+    get:
+      operationId: getAdminStats
+      tags: [admin]
+      summary: Get admin dashboard statistics
+      responses:
+        "200":
+          description: Admin stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStats"
+
+  /admin/wallets:
+    get:
+      operationId: getAdminWallets
+      tags: [admin]
+      summary: Get all registered wallets (admin)
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: All wallets
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminWalletListResponse"
+
+  /admin/wallets/{walletAddress}/freeze:
+    post:
+      operationId: freezeWallet
+      tags: [admin]
+      summary: Freeze or unfreeze a wallet
+      parameters:
+        - name: walletAddress
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FreezeWalletBody"
+      responses:
+        "200":
+          description: Wallet freeze status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WalletRecord"
+
+  /admin/faucet-limits:
+    get:
+      operationId: getFaucetLimits
+      tags: [admin]
+      summary: Get current faucet limits
+      responses:
+        "200":
+          description: Faucet limits
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FaucetLimits"
+    put:
+      operationId: updateFaucetLimits
+      tags: [admin]
+      summary: Update faucet limits
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateFaucetLimitsBody"
+      responses:
+        "200":
+          description: Faucet limits updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FaucetLimits"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +330,310 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    FaucetClaimBody:
+      type: object
+      properties:
+        walletAddress:
+          type: string
+        network:
+          type: string
+          enum: [tezos, ethereum]
+        tokenType:
+          type: string
+          enum: [USDtz-SIM, USDT-SIM]
+      required:
+        - walletAddress
+        - network
+        - tokenType
+
+    FaucetClaimResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        amount:
+          type: number
+        tokenType:
+          type: string
+        txHash:
+          type: string
+        remainingDaily:
+          type: number
+        message:
+          type: string
+      required:
+        - success
+        - amount
+        - tokenType
+        - txHash
+        - remainingDaily
+        - message
+
+    FaucetStatus:
+      type: object
+      properties:
+        walletAddress:
+          type: string
+        network:
+          type: string
+        claimedToday:
+          type: number
+        dailyLimit:
+          type: number
+        canClaim:
+          type: boolean
+        nextClaimAt:
+          type: ["string", "null"]
+      required:
+        - walletAddress
+        - network
+        - claimedToday
+        - dailyLimit
+        - canClaim
+        - nextClaimAt
+
+    TransferBody:
+      type: object
+      properties:
+        fromAddress:
+          type: string
+        toAddress:
+          type: string
+        network:
+          type: string
+          enum: [tezos, ethereum]
+        tokenType:
+          type: string
+          enum: [USDtz-SIM, USDT-SIM]
+        amount:
+          type: number
+      required:
+        - fromAddress
+        - toAddress
+        - network
+        - tokenType
+        - amount
+
+    TransferResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        txHash:
+          type: string
+        amount:
+          type: number
+        tokenType:
+          type: string
+        fromAddress:
+          type: string
+        toAddress:
+          type: string
+      required:
+        - success
+        - txHash
+        - amount
+        - tokenType
+        - fromAddress
+        - toAddress
+
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: integer
+        txHash:
+          type: string
+        type:
+          type: string
+          enum: [faucet, transfer_in, transfer_out]
+        walletAddress:
+          type: string
+        counterpartyAddress:
+          type: ["string", "null"]
+        network:
+          type: string
+          enum: [tezos, ethereum]
+        tokenType:
+          type: string
+        amount:
+          type: number
+        createdAt:
+          type: string
+      required:
+        - id
+        - txHash
+        - type
+        - walletAddress
+        - counterpartyAddress
+        - network
+        - tokenType
+        - amount
+        - createdAt
+
+    TransactionListResponse:
+      type: object
+      properties:
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Transaction"
+        total:
+          type: integer
+      required:
+        - transactions
+        - total
+
+    TransactionSummary:
+      type: object
+      properties:
+        totalReceived:
+          type: number
+        totalSent:
+          type: number
+        totalFaucetClaimed:
+          type: number
+        transactionCount:
+          type: integer
+        usdtzSimBalance:
+          type: number
+        usdtSimBalance:
+          type: number
+      required:
+        - totalReceived
+        - totalSent
+        - totalFaucetClaimed
+        - transactionCount
+        - usdtzSimBalance
+        - usdtSimBalance
+
+    RegisterWalletBody:
+      type: object
+      properties:
+        walletAddress:
+          type: string
+        network:
+          type: string
+          enum: [tezos, ethereum]
+        walletType:
+          type: string
+          enum: [temple, beacon, metamask]
+      required:
+        - walletAddress
+        - network
+        - walletType
+
+    WalletRecord:
+      type: object
+      properties:
+        id:
+          type: integer
+        walletAddress:
+          type: string
+        network:
+          type: string
+        walletType:
+          type: string
+        usdtzSimBalance:
+          type: number
+        usdtSimBalance:
+          type: number
+        isFrozen:
+          type: boolean
+        createdAt:
+          type: string
+        lastSeenAt:
+          type: string
+      required:
+        - id
+        - walletAddress
+        - network
+        - walletType
+        - usdtzSimBalance
+        - usdtSimBalance
+        - isFrozen
+        - createdAt
+        - lastSeenAt
+
+    AdminStats:
+      type: object
+      properties:
+        totalWallets:
+          type: integer
+        totalTezosWallets:
+          type: integer
+        totalEthereumWallets:
+          type: integer
+        totalUsdtzSimDistributed:
+          type: number
+        totalUsdtSimDistributed:
+          type: number
+        totalTransactions:
+          type: integer
+        frozenWallets:
+          type: integer
+        todaysClaims:
+          type: integer
+      required:
+        - totalWallets
+        - totalTezosWallets
+        - totalEthereumWallets
+        - totalUsdtzSimDistributed
+        - totalUsdtSimDistributed
+        - totalTransactions
+        - frozenWallets
+        - todaysClaims
+
+    AdminWalletListResponse:
+      type: object
+      properties:
+        wallets:
+          type: array
+          items:
+            $ref: "#/components/schemas/WalletRecord"
+        total:
+          type: integer
+      required:
+        - wallets
+        - total
+
+    FreezeWalletBody:
+      type: object
+      properties:
+        frozen:
+          type: boolean
+      required:
+        - frozen
+
+    FaucetLimits:
+      type: object
+      properties:
+        tezosUsdtzSimDailyLimit:
+          type: number
+        ethereumUsdtSimDailyLimit:
+          type: number
+        updatedAt:
+          type: string
+      required:
+        - tezosUsdtzSimDailyLimit
+        - ethereumUsdtSimDailyLimit
+        - updatedAt
+
+    UpdateFaucetLimitsBody:
+      type: object
+      properties:
+        tezosUsdtzSimDailyLimit:
+          type: number
+        ethereumUsdtSimDailyLimit:
+          type: number
+      required:
+        - tezosUsdtzSimDailyLimit
+        - ethereumUsdtSimDailyLimit

@@ -1,0 +1,19 @@
+import { pgTable, serial, text, numeric, timestamp } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod/v4";
+
+export const transactionsTable = pgTable("transactions", {
+  id: serial("id").primaryKey(),
+  txHash: text("tx_hash").notNull(),
+  type: text("type").notNull(),
+  walletAddress: text("wallet_address").notNull(),
+  counterpartyAddress: text("counterparty_address"),
+  network: text("network").notNull(),
+  tokenType: text("token_type").notNull(),
+  amount: numeric("amount", { precision: 20, scale: 6 }).notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertTransactionSchema = createInsertSchema(transactionsTable).omit({ id: true, createdAt: true });
+export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
+export type Transaction = typeof transactionsTable.$inferSelect;
