@@ -39,13 +39,13 @@ function App() {
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          <WalletProvider>
-            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+            <WalletProvider>
               <Layout>
                 <Router />
               </Layout>
-            </WouterRouter>
-          </WalletProvider>
+            </WalletProvider>
+          </WouterRouter>
           <Toaster />
         </TooltipProvider>
       </QueryClientProvider>
