@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useWallet, CHAINS } from '@/context/WalletContext';
 import {
   useGetWallet, getGetWalletQueryKey,
-  useGetTransactionSummary, getGetTransactionSummaryQueryKey,
+  useGetTransactionSummary, getGetTransactionSummaryQueryKey, getGetTransactionsQueryKey,
   useTopUpWallet, useToggleAutoAccumulate
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -60,18 +60,27 @@ export default function Dashboard() {
 
   const handleTopUp = async () => {
     const amt = parseFloat(topupAmount);
-    if (!amt || amt <= 0 || amt > 200_000_000) {
+    if (!Number.isFinite(amt) || amt < 0.000001 || amt > 200_000_000 || !Number.isInteger(amt * 1_000_000)) {
       toast({ variant: 'destructive', title: 'Invalid amount', description: 'Enter an amount between 1 and 200,000,000' });
       return;
     }
     try {
-      await topUpMutation.mutateAsync({ walletAddress: address, data: { network, tokenType, amount: amt } });
-      queryClient.invalidateQueries({ queryKey: walletQueryKey });
+      const updatedWallet = await topUpMutation.mutateAsync({ walletAddress: address, data: { network, tokenType, amount: amt } });
+      queryClient.setQueryData(walletQueryKey, updatedWallet);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: walletQueryKey }),
+        queryClient.invalidateQueries({ queryKey: summaryQueryKey }),
+        queryClient.invalidateQueries({ queryKey: getGetTransactionsQueryKey() }),
+      ]);
       toast({ title: 'Top-up successful', description: `Added ${amt.toLocaleString()} ${tokenType} to your wallet` });
       setTopupAmount('');
       setShowTopUp(false);
-    } catch {
-      toast({ variant: 'destructive', title: 'Top-up failed', description: 'Could not top up your wallet' });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Top-up failed',
+        description: error instanceof Error ? error.message : 'Could not top up your wallet',
+      });
     }
   };
 
@@ -168,12 +177,19 @@ export default function Dashboard() {
                 Top Up Balance (up to $200,000,000)
               </button>
             ) : (
-              <div className="space-y-3">
+                <form
+                  className="space-y-3"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    void handleTopUp();
+                  }}
+                >
                 <p className="text-sm font-semibold text-foreground">Top Up Wallet</p>
                 <div className="flex flex-wrap gap-2">
                   {TOPUP_PRESETS.map((p) => (
                     <button
                       key={p}
+                        type="button"
                       onClick={() => setTopupAmount(p.toString())}
                       data-testid={`topup-preset-${p}`}
                       className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-colors ${
@@ -191,18 +207,22 @@ export default function Dashboard() {
                     type="number"
                     placeholder="Custom amount"
                     value={topupAmount}
+                    min="0.000001"
+                    max="200000000"
+                    step="0.000001"
+                    required
                     onChange={(e) => setTopupAmount(e.target.value)}
                     data-testid="input-topup-amount"
                     className="flex-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-foreground outline-none focus:border-blue-500 placeholder:text-muted-foreground"
                   />
-                  <Button onClick={handleTopUp} disabled={topUpMutation.isPending} size="sm" data-testid="btn-topup-confirm">
+                  <Button type="submit" disabled={topUpMutation.isPending} size="sm" data-testid="btn-topup-confirm">
                     {topUpMutation.isPending ? 'Adding...' : 'Add Funds'}
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => { setShowTopUp(false); setTopupAmount(''); }}>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => { setShowTopUp(false); setTopupAmount(''); }}>
                     Cancel
                   </Button>
-                </div>
-              </div>
+                  </div>
+                </form>
             )}
           </div>
         </CardContent>
@@ -235,11 +255,12 @@ export default function Dashboard() {
         <h2 className="text-base font-bold mb-3 flex items-center gap-2 text-foreground">
           <Activity className="h-4 w-4" /> Activity Summary
         </h2>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
             { label: 'Total Received', icon: <ArrowDownLeft className="h-4 w-4 text-emerald-500" />, value: summary?.totalReceived },
             { label: 'Total Sent', icon: <ArrowUpRight className="h-4 w-4 text-rose-500" />, value: summary?.totalSent },
             { label: 'Faucet Claimed', icon: <Wallet className="h-4 w-4 text-blue-500" />, value: summary?.totalFaucetClaimed },
+            { label: 'Added Funds', icon: <TrendingUp className="h-4 w-4 text-violet-500" />, value: summary?.totalToppedUp },
           ].map((s) => (
             <Card key={s.label} className="bg-card/20 border-border/40">
               <CardContent className="p-4">

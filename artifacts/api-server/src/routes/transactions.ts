@@ -58,6 +58,7 @@ router.get("/transactions/summary", async (req, res) => {
   let totalReceived = 0;
   let totalSent = 0;
   let totalFaucetClaimed = 0;
+  let totalToppedUp = 0;
   let usdtzSimBalance = 0;
   let usdtSimBalance = 0;
 
@@ -75,6 +76,10 @@ router.get("/transactions/summary", async (req, res) => {
       totalSent += amt;
       if (tx.tokenType === "USDtz-SIM") usdtzSimBalance -= amt;
       else usdtSimBalance -= amt;
+    } else if (tx.type === "topup") {
+      totalToppedUp += amt;
+      if (tx.tokenType === "USDtz-SIM") usdtzSimBalance += amt;
+      else usdtSimBalance += amt;
     }
   }
 
@@ -82,6 +87,7 @@ router.get("/transactions/summary", async (req, res) => {
     totalReceived,
     totalSent,
     totalFaucetClaimed,
+    totalToppedUp,
     transactionCount: rows.length,
     usdtzSimBalance: Math.max(0, usdtzSimBalance),
     usdtSimBalance: Math.max(0, usdtSimBalance),

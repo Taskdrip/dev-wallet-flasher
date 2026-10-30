@@ -81,7 +81,7 @@ paths:
           required: true
           schema:
             type: string
-            enum: [tezos, ethereum]
+            enum: [tezos, ethereum, tron, bnb]
       responses:
         "200":
           description: Faucet status
@@ -131,7 +131,7 @@ paths:
           required: false
           schema:
             type: string
-            enum: [tezos, ethereum]
+            enum: [tezos, ethereum, tron, bnb]
         - name: limit
           in: query
           required: false
@@ -211,7 +211,7 @@ paths:
           required: true
           schema:
             type: string
-            enum: [tezos, ethereum]
+            enum: [tezos, ethereum, tron, bnb]
       responses:
         "200":
           description: Wallet info
@@ -426,7 +426,7 @@ components:
           type: string
         network:
           type: string
-          enum: [tezos, ethereum]
+          enum: [tezos, ethereum, tron, bnb]
         tokenType:
           type: string
           enum: [USDtz-SIM, USDT-SIM]
@@ -490,7 +490,7 @@ components:
           type: string
         network:
           type: string
-          enum: [tezos, ethereum]
+          enum: [tezos, ethereum, tron, bnb]
         tokenType:
           type: string
           enum: [USDtz-SIM, USDT-SIM]
@@ -535,14 +535,14 @@ components:
           type: string
         type:
           type: string
-          enum: [faucet, transfer_in, transfer_out]
+          enum: [faucet, transfer_in, transfer_out, topup]
         walletAddress:
           type: string
         counterpartyAddress:
           type: ["string", "null"]
         network:
           type: string
-          enum: [tezos, ethereum]
+          enum: [tezos, ethereum, tron, bnb]
         tokenType:
           type: string
         amount:
@@ -582,6 +582,8 @@ components:
           type: number
         totalFaucetClaimed:
           type: number
+        totalToppedUp:
+          type: number
         transactionCount:
           type: integer
         usdtzSimBalance:
@@ -592,6 +594,7 @@ components:
         - totalReceived
         - totalSent
         - totalFaucetClaimed
+        - totalToppedUp
         - transactionCount
         - usdtzSimBalance
         - usdtSimBalance
@@ -727,11 +730,15 @@ components:
       properties:
         network:
           type: string
+          enum: [tezos, ethereum, tron, bnb]
         tokenType:
           type: string
           enum: [USDtz-SIM, USDT-SIM]
         amount:
           type: number
+          minimum: 0.000001
+          maximum: 200000000
+          multipleOf: 0.000001
       required:
         - network
         - tokenType
@@ -757,10 +764,15 @@ components:
           type: string
         network:
           type: string
+          enum: [tezos, ethereum, tron, bnb]
         tokenType:
           type: string
+          enum: [USDtz-SIM, USDT-SIM]
         amount:
           type: number
+          minimum: 0.000001
+          maximum: 200000000
+          multipleOf: 0.000001
         message:
           type: ["string", "null"]
       required:

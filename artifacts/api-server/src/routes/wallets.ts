@@ -1,8 +1,9 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { walletsTable } from "@workspace/db/schema";
-import { RegisterWalletBody, GetWalletParams, GetWalletQueryParams } from "@workspace/api-zod";
+import { transactionsTable, walletsTable } from "@workspace/db/schema";
+import { GetWalletParams, GetWalletQueryParams, RegisterWalletBody, TopUpBody } from "@workspace/api-zod";
 import { eq, and, sql } from "drizzle-orm";
+import crypto from "crypto";
 
 const router: IRouter = Router();
 
@@ -74,46 +75,69 @@ router.get("/wallets/:walletAddress", async (req, res) => {
 const MAX_TOPUP = 200_000_000;
 
 router.post("/wallets/:walletAddress/topup", async (req, res) => {
-  const { walletAddress } = req.params;
-  const { network, tokenType, amount } = req.body as { network: string; tokenType: string; amount: number };
-
-  if (!amount || amount <= 0 || amount > MAX_TOPUP) {
-    res.status(400).json({ error: `Amount must be between 1 and ${MAX_TOPUP.toLocaleString()}` });
+  const params = GetWalletParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: "Invalid wallet address" });
     return;
   }
 
-  const existing = await db
-    .select()
-    .from(walletsTable)
-    .where(and(eq(walletsTable.walletAddress, walletAddress), eq(walletsTable.network, network)))
-    .limit(1);
-
-  if (existing.length === 0) {
-    res.status(404).json({ error: "Wallet not found. Connect your wallet first." });
+  const parsedBody = TopUpBody.safeParse(req.body);
+  if (!parsedBody.success) {
+    res.status(400).json({ error: parsedBody.error.issues[0]?.message ?? "Invalid top-up request" });
     return;
   }
 
-  if (existing[0].isFrozen) {
-    res.status(400).json({ error: "Wallet is frozen" });
+  const { walletAddress } = params.data;
+  const { network, tokenType, amount } = parsedBody.data;
+  if ((network === "tezos") !== (tokenType === "USDtz-SIM")) {
+    res.status(400).json({ error: "USDtz-SIM is only available on Tezos; use USDT-SIM on EVM and Tron testnets." });
     return;
   }
 
-  let updated;
-  if (tokenType === "USDtz-SIM") {
-    updated = await db
-      .update(walletsTable)
-      .set({ usdtzSimBalance: sql`${walletsTable.usdtzSimBalance} + ${amount}`, lastSeenAt: new Date() })
-      .where(eq(walletsTable.id, existing[0].id))
-      .returning();
-  } else {
-    updated = await db
-      .update(walletsTable)
-      .set({ usdtSimBalance: sql`${walletsTable.usdtSimBalance} + ${amount}`, lastSeenAt: new Date() })
-      .where(eq(walletsTable.id, existing[0].id))
-      .returning();
+  const result = await db.transaction(async (tx) => {
+    const existing = await tx
+      .select()
+      .from(walletsTable)
+      .where(and(eq(walletsTable.walletAddress, walletAddress), eq(walletsTable.network, network)))
+      .limit(1)
+      .for("update");
+
+    if (existing.length === 0) {
+      return { status: 404 as const, error: "Wallet not found. Connect your wallet first." };
+    }
+    if (existing[0].isFrozen) {
+      return { status: 400 as const, error: "Wallet is frozen" };
+    }
+
+    const updated = tokenType === "USDtz-SIM"
+      ? await tx.update(walletsTable)
+          .set({ usdtzSimBalance: sql`${walletsTable.usdtzSimBalance} + ${amount}`, lastSeenAt: new Date() })
+          .where(eq(walletsTable.id, existing[0].id))
+          .returning()
+      : await tx.update(walletsTable)
+          .set({ usdtSimBalance: sql`${walletsTable.usdtSimBalance} + ${amount}`, lastSeenAt: new Date() })
+          .where(eq(walletsTable.id, existing[0].id))
+          .returning();
+
+    await tx.insert(transactionsTable).values({
+      txHash: `SIM-${crypto.randomUUID()}`,
+      type: "topup",
+      walletAddress,
+      counterpartyAddress: "SIMULATED_TOP_UP",
+      network,
+      tokenType,
+      amount: amount.toString(),
+    });
+
+    return { wallet: updated[0] };
+  });
+
+  if ("error" in result) {
+    res.status(result.status).json({ error: result.error });
+    return;
   }
 
-  res.json(formatWallet(updated[0]));
+  res.json(formatWallet(result.wallet));
 });
 
 router.post("/wallets/:walletAddress/auto-accumulate", async (req, res) => {
