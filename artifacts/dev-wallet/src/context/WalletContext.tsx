@@ -1,8 +1,9 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { isAvailable as isTempleAvailable, requestPermission as requestTemplePermission } from '@temple-wallet/dapp';
 import { useRegisterWallet } from '@workspace/api-client-react';
 import { useLocation } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/AuthContext';
 
 export type Network = 'tezos' | 'ethereum' | 'tron' | 'bnb';
 export type WalletType = 'temple' | 'beacon' | 'metamask' | 'tronlink';
@@ -80,37 +81,88 @@ declare global {
     ethereum?: {
       request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
       on: (event: string, handler: (...args: unknown[]) => void) => void;
+      removeListener?: (event: string, handler: (...args: unknown[]) => void) => void;
     };
     tronLink?: {
       request: (args: { method: string }) => Promise<{ code: number }>;
     };
     tronWeb?: {
       defaultAddress: { base58: string };
+      fullNode?: { host?: string };
     };
   }
 }
 
 export const WalletProvider = ({ children }: { children: ReactNode }) => {
+  const { user, isLoading: authLoading } = useAuth();
   const [address, setAddress] = useState<string | null>(null);
   const [network, setNetwork] = useState<Network | null>(null);
   const [walletType, setWalletType] = useState<WalletType | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [selectedChain, setSelectedChain] = useState<ChainConfig | null>(null);
+  const [restoreReady, setRestoreReady] = useState(false);
 
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
   const registerWallet = useRegisterWallet();
 
+  useEffect(() => {
+    if (authLoading) return;
+    setRestoreReady(false);
+    setAddress(null);
+    setNetwork(null);
+    setWalletType(null);
+    setSelectedChain(null);
+
+    if (!user) {
+      setRestoreReady(true);
+      return;
+    }
+
+    try {
+      const key = `dev-wallet-connection:${user.id}`;
+      const saved = sessionStorage.getItem(key);
+      if (saved) {
+        const parsed = JSON.parse(saved) as { address?: unknown; network?: unknown; walletType?: unknown };
+        const chain = CHAINS.find((item) => item.id === parsed.network);
+        const supportedTypes: WalletType[] = ['temple', 'beacon', 'metamask', 'tronlink'];
+        if (typeof parsed.address === 'string' && chain && supportedTypes.includes(parsed.walletType as WalletType)) {
+          setAddress(parsed.address);
+          setNetwork(chain.id);
+          setWalletType(parsed.walletType as WalletType);
+          setSelectedChain(chain);
+        } else {
+          sessionStorage.removeItem(key);
+        }
+      }
+    } catch {
+      sessionStorage.removeItem(`dev-wallet-connection:${user.id}`);
+    }
+    setRestoreReady(true);
+  }, [authLoading, user?.id]);
+
+  useEffect(() => {
+    if (authLoading || !restoreReady || !user) return;
+    const key = `dev-wallet-connection:${user.id}`;
+    if (address && network && walletType) {
+      sessionStorage.setItem(key, JSON.stringify({ address, network, walletType }));
+    } else {
+      sessionStorage.removeItem(key);
+    }
+  }, [address, network, walletType, authLoading, restoreReady, user?.id]);
+
   const handleConnect = async (addr: string, net: Network, type: WalletType) => {
+    if (!user) throw new Error('Sign in to your account before connecting a wallet.');
+    const normalizedAddress = net === 'ethereum' || net === 'bnb' ? addr.toLowerCase() : addr;
     await registerWallet.mutateAsync({
       data: {
-        walletAddress: addr,
+        walletAddress: normalizedAddress,
         network: net,
         walletType: type,
       },
     });
-    setAddress(addr);
+    setAddress(normalizedAddress);
     setNetwork(net);
     setWalletType(type);
     setLocation('/dashboard');
@@ -123,6 +175,43 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
   const connectMetaMask = async (chain: ChainConfig) => {
     if (typeof window === 'undefined' || !window.ethereum) {
       throw new Error(`Install MetaMask to connect to ${chain.name}.`);
+    }
+    const networkConfig = chain.id === 'ethereum'
+      ? {
+          chainId: '0xaa36a7',
+          chainName: 'Sepolia',
+          nativeCurrency: { name: 'Sepolia Ether', symbol: 'ETH', decimals: 18 },
+          rpcUrls: ['https://ethereum-sepolia-rpc.publicnode.com'],
+          blockExplorerUrls: ['https://sepolia.etherscan.io'],
+        }
+      : {
+          chainId: '0x61',
+          chainName: 'BNB Smart Chain Testnet',
+          nativeCurrency: { name: 'Test BNB', symbol: 'tBNB', decimals: 18 },
+          rpcUrls: ['https://bsc-testnet-dataseed.bnbchain.org'],
+          blockExplorerUrls: ['https://testnet.bscscan.com'],
+        };
+    const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
+    if (typeof currentChainId !== 'string' || currentChainId.toLowerCase() !== networkConfig.chainId) {
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: networkConfig.chainId }],
+        });
+      } catch (switchError) {
+        const errorCode = switchError && typeof switchError === 'object' && 'code' in switchError
+          ? switchError.code
+          : undefined;
+        if (errorCode !== 4902) throw new Error(`Switch MetaMask to ${chain.testnet} to continue.`);
+        await window.ethereum.request({
+          method: 'wallet_addEthereumChain',
+          params: [networkConfig],
+        });
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: networkConfig.chainId }],
+        });
+      }
     }
     const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
     if (!Array.isArray(accounts) || typeof accounts[0] !== 'string' || !accounts[0]) {
@@ -140,6 +229,9 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     if (result.code !== 200 || !address) {
       throw new Error('TronLink did not return an account. Unlock it and try again.');
     }
+    if (!/nile/i.test(window.tronWeb?.fullNode?.host ?? '')) {
+      throw new Error('Switch TronLink to the Nile test network, then try again.');
+    }
     await handleConnect(address, chain.id, 'tronlink');
   };
 
@@ -155,6 +247,10 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const connectWallet = async (chain: ChainConfig) => {
+    if (!user) {
+      toast({ variant: 'destructive', title: 'Sign in first', description: 'Create an account or sign in before connecting a test wallet.' });
+      return;
+    }
     setIsConnecting(true);
     setSelectedChain(chain);
     try {
@@ -180,6 +276,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const disconnect = () => {
+    if (user) sessionStorage.removeItem(`dev-wallet-connection:${user.id}`);
     setAddress(null);
     setNetwork(null);
     setWalletType(null);

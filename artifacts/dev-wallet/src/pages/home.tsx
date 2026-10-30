@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { useWallet, CHAINS, type ChainConfig } from '@/context/WalletContext';
+import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Shield, Zap, ArrowDownLeft, ArrowUpRight, RefreshCw, BookOpen, ChevronRight } from 'lucide-react';
 import { Link } from 'wouter';
+import { useToast } from '@/hooks/use-toast';
 
 const CHAIN_ICONS: Record<string, string> = {
   ethereum: 'ETH',
@@ -13,12 +16,52 @@ const CHAIN_ICONS: Record<string, string> = {
 
 export default function Home() {
   const { connectWallet, isConnecting } = useWallet();
+  const { user, signIn, signUp } = useAuth();
+  const { toast } = useToast();
   const [selectedChain, setSelectedChain] = useState<ChainConfig | null>(null);
   const [hoveredChain, setHoveredChain] = useState<string | null>(null);
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
+  const [identity, setIdentity] = useState('');
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authError, setAuthError] = useState('');
 
   const handleConnect = async () => {
     if (!selectedChain) return;
     await connectWallet(selectedChain);
+  };
+
+  const handleAuth = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setAuthError('');
+    setAuthBusy(true);
+    try {
+      if (authMode === 'signup') {
+        if (!email.trim() && !phone.trim()) {
+          throw new Error('Add an email address or phone number.');
+        }
+        await signUp({
+          username,
+          email: email.trim() || undefined,
+          phone: phone.trim() || undefined,
+          password,
+        });
+        toast({ title: 'Account created', description: 'Your account is ready. Now connect a test wallet.' });
+      } else {
+        await signIn(identity, password);
+        toast({ title: 'Signed in', description: 'Now connect a test wallet to open your dashboard.' });
+      }
+      setPassword('');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not sign in. Please try again.';
+      setAuthError(message);
+      toast({ variant: 'destructive', title: authMode === 'signup' ? 'Signup failed' : 'Sign-in failed', description: message });
+    } finally {
+      setAuthBusy(false);
+    }
   };
 
   return (
@@ -80,14 +123,130 @@ export default function Home() {
           </div>
         </div>
 
+        <div className="max-w-2xl mx-auto mb-10">
+          {!user ? (
+            <div className="rounded-2xl border border-slate-700/70 bg-slate-900/85 p-5 md:p-7 shadow-xl">
+              <div className="flex items-start justify-between gap-4 mb-5">
+                <div>
+                  <h2 className="text-white font-bold text-lg">
+                    {authMode === 'signup' ? 'Create your account' : 'Sign in to continue'}
+                  </h2>
+                  <p className="text-slate-400 text-sm mt-1">
+                    Sign in first, then connect a wallet on a supported test network.
+                  </p>
+                </div>
+                <Shield className="h-5 w-5 text-blue-400 shrink-0 mt-1" />
+              </div>
+
+              <form onSubmit={handleAuth} className="space-y-3">
+                {authMode === 'signup' ? (
+                  <>
+                    <label className="block space-y-1.5">
+                      <span className="text-xs font-semibold text-slate-300">Username</span>
+                      <Input
+                        autoComplete="username"
+                        minLength={3}
+                        maxLength={32}
+                        required
+                        value={username}
+                        onChange={(event) => setUsername(event.target.value)}
+                        placeholder="Choose a username"
+                        className="bg-slate-950 border-slate-700"
+                      />
+                    </label>
+                    <div className="grid sm:grid-cols-2 gap-3">
+                      <label className="block space-y-1.5">
+                        <span className="text-xs font-semibold text-slate-300">Email address (optional)</span>
+                        <Input
+                          type="email"
+                          autoComplete="email"
+                          value={email}
+                          onChange={(event) => setEmail(event.target.value)}
+                          placeholder="you@example.com"
+                          className="bg-slate-950 border-slate-700"
+                        />
+                      </label>
+                      <label className="block space-y-1.5">
+                        <span className="text-xs font-semibold text-slate-300">Phone number (optional)</span>
+                        <Input
+                          type="tel"
+                          autoComplete="tel"
+                          value={phone}
+                          onChange={(event) => setPhone(event.target.value)}
+                          placeholder="+14155552671"
+                          className="bg-slate-950 border-slate-700"
+                        />
+                      </label>
+                    </div>
+                    <p className="text-[11px] text-slate-500">
+                      Add an email or phone to use it for sign-in. Contact details are not verified.
+                    </p>
+                  </>
+                ) : (
+                  <label className="block space-y-1.5">
+                    <span className="text-xs font-semibold text-slate-300">Username, email, or phone</span>
+                    <Input
+                      autoComplete="username"
+                      required
+                      value={identity}
+                      onChange={(event) => setIdentity(event.target.value)}
+                      placeholder="Username, you@example.com, or +14155552671"
+                      className="bg-slate-950 border-slate-700"
+                    />
+                  </label>
+                )}
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-semibold text-slate-300">Password</span>
+                  <Input
+                    type="password"
+                    autoComplete={authMode === 'signup' ? 'new-password' : 'current-password'}
+                    minLength={authMode === 'signup' ? 10 : 1}
+                    maxLength={128}
+                    required
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    placeholder={authMode === 'signup' ? 'At least 10 characters' : 'Your password'}
+                    className="bg-slate-950 border-slate-700"
+                  />
+                </label>
+                {authError && <p role="alert" className="text-sm text-rose-400">{authError}</p>}
+                <Button type="submit" disabled={authBusy} className="w-full h-11 font-bold">
+                  {authBusy ? 'Please wait…' : authMode === 'signup' ? 'Create account' : 'Sign in'}
+                </Button>
+              </form>
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthError('');
+                  setPassword('');
+                  setAuthMode(authMode === 'signup' ? 'signin' : 'signup');
+                }}
+                className="mt-4 text-sm text-blue-300 hover:text-blue-200"
+              >
+                {authMode === 'signup' ? 'Already have an account? Sign in' : 'New here? Create an account'}
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-emerald-500/25 bg-emerald-500/5 px-5 py-4">
+              <div>
+                <p className="text-xs uppercase tracking-widest text-emerald-400 font-bold">Account signed in</p>
+                <p className="text-white font-semibold mt-1">@{user.username}</p>
+              </div>
+              <p className="text-slate-400 text-sm">Choose a test network and connect your wallet below.</p>
+            </div>
+          )}
+        </div>
+
         {/* Chain selector */}
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-6">
             <h2 className="text-white font-bold text-lg mb-1">Select a Blockchain</h2>
-            <p className="text-slate-500 text-sm">Choose your network, then connect your wallet</p>
+            <p className="text-slate-500 text-sm">
+              {user ? 'Choose a test network, then connect your wallet' : 'Sign in or create an account before connecting a wallet'}
+            </p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+          <div className={`grid grid-cols-2 md:grid-cols-4 gap-3 mb-6 ${!user ? 'opacity-50 pointer-events-none' : ''}`}>
             {CHAINS.map((chain) => {
               const isSelected = selectedChain?.id === chain.id;
               const isHovered = hoveredChain === chain.id;
@@ -95,6 +254,7 @@ export default function Home() {
                 <button
                   key={chain.id}
                   onClick={() => setSelectedChain(chain)}
+                  disabled={!user}
                   onMouseEnter={() => setHoveredChain(chain.id)}
                   onMouseLeave={() => setHoveredChain(null)}
                   data-testid={`chain-select-${chain.id}`}
@@ -128,7 +288,7 @@ export default function Home() {
 
           {/* Connect button */}
           <div className="space-y-3">
-            {selectedChain ? (
+            {selectedChain && user ? (
               <Button
                 onClick={handleConnect}
                 disabled={isConnecting}

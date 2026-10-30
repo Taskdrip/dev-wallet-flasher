@@ -4,7 +4,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "next-themes";
 import { WalletProvider } from "@/context/WalletContext";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { Layout } from "@/components/layout";
+import { useEffect } from "react";
+import { useLocation, Redirect } from "wouter";
 
 import Home from "@/pages/home";
 import Dashboard from "@/pages/dashboard";
@@ -19,6 +22,17 @@ import NotFound from "@/pages/not-found";
 const queryClient = new QueryClient();
 
 function Router() {
+  const { user, isLoading } = useAuth();
+  const [location] = useLocation();
+  useEffect(() => {
+    queryClient.clear();
+  }, [user?.id]);
+
+  if (isLoading) {
+    return <div className="min-h-[60vh] flex items-center justify-center text-muted-foreground">Loading your account…</div>;
+  }
+  if (!user && location !== "/") return <Redirect to="/" />;
+
   return (
     <Switch>
       <Route path="/" component={Home} />
@@ -40,11 +54,13 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <WalletProvider>
-              <Layout>
-                <Router />
-              </Layout>
-            </WalletProvider>
+            <AuthProvider>
+              <WalletProvider>
+                <Layout>
+                  <Router />
+                </Layout>
+              </WalletProvider>
+            </AuthProvider>
           </WouterRouter>
           <Toaster />
         </TooltipProvider>

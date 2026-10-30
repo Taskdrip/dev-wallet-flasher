@@ -7,24 +7,38 @@ import crypto from "crypto";
 
 const router: IRouter = Router();
 
+function normalizeWalletAddress(address: string, network: string): string {
+  return network === "ethereum" || network === "bnb" ? address.toLowerCase() : address;
+}
+
 router.post("/wallets/register", async (req, res) => {
   const body = RegisterWalletBody.parse(req.body);
+  const userId = req.authUser?.id;
+  if (!userId) {
+    res.status(401).json({ error: "Sign in to connect a wallet." });
+    return;
+  }
+  const walletAddress = normalizeWalletAddress(body.walletAddress, body.network);
 
   const existing = await db
     .select()
     .from(walletsTable)
     .where(
       and(
-        eq(walletsTable.walletAddress, body.walletAddress),
+        eq(walletsTable.walletAddress, walletAddress),
         eq(walletsTable.network, body.network),
       ),
     )
     .limit(1);
 
   if (existing.length > 0) {
+    if (existing[0].userId !== null && existing[0].userId !== userId) {
+      res.status(409).json({ error: "This wallet is already linked to another account." });
+      return;
+    }
     await db
       .update(walletsTable)
-      .set({ lastSeenAt: new Date(), walletType: body.walletType })
+      .set({ userId, lastSeenAt: new Date(), walletType: body.walletType })
       .where(eq(walletsTable.id, existing[0].id));
 
     const updated = await db
@@ -40,7 +54,8 @@ router.post("/wallets/register", async (req, res) => {
   const inserted = await db
     .insert(walletsTable)
     .values({
-      walletAddress: body.walletAddress,
+      userId,
+      walletAddress,
       network: body.network,
       walletType: body.walletType,
     })
@@ -52,14 +67,20 @@ router.post("/wallets/register", async (req, res) => {
 router.get("/wallets/:walletAddress", async (req, res) => {
   const params = GetWalletParams.parse(req.params);
   const query = GetWalletQueryParams.parse(req.query);
+  const userId = req.authUser?.id;
+  if (!userId) {
+    res.status(401).json({ error: "Sign in to view this wallet." });
+    return;
+  }
 
   const wallet = await db
     .select()
     .from(walletsTable)
     .where(
       and(
-        eq(walletsTable.walletAddress, params.walletAddress),
+        eq(walletsTable.walletAddress, normalizeWalletAddress(params.walletAddress, query.network)),
         eq(walletsTable.network, query.network),
+        eq(walletsTable.userId, userId),
       ),
     )
     .limit(1);
@@ -95,10 +116,15 @@ router.post("/wallets/:walletAddress/topup", async (req, res) => {
   }
 
   const result = await db.transaction(async (tx) => {
+    const normalizedAddress = normalizeWalletAddress(walletAddress, network);
     const existing = await tx
       .select()
       .from(walletsTable)
-      .where(and(eq(walletsTable.walletAddress, walletAddress), eq(walletsTable.network, network)))
+      .where(and(
+        eq(walletsTable.walletAddress, normalizedAddress),
+        eq(walletsTable.network, network),
+        eq(walletsTable.userId, req.authUser!.id),
+      ))
       .limit(1)
       .for("update");
 
@@ -122,7 +148,7 @@ router.post("/wallets/:walletAddress/topup", async (req, res) => {
     await tx.insert(transactionsTable).values({
       txHash: `SIM-${crypto.randomUUID()}`,
       type: "topup",
-      walletAddress,
+      walletAddress: normalizedAddress,
       counterpartyAddress: "SIMULATED_TOP_UP",
       network,
       tokenType,
@@ -142,12 +168,21 @@ router.post("/wallets/:walletAddress/topup", async (req, res) => {
 
 router.post("/wallets/:walletAddress/auto-accumulate", async (req, res) => {
   const { walletAddress } = req.params;
-  const { network, enabled } = req.body as { network: string; enabled: boolean };
+  const network = req.body?.network;
+  const enabled = req.body?.enabled;
+  if (!["tezos", "ethereum", "tron", "bnb"].includes(network) || typeof enabled !== "boolean") {
+    res.status(400).json({ error: "A valid network and enabled flag are required." });
+    return;
+  }
 
   const existing = await db
     .select()
     .from(walletsTable)
-    .where(and(eq(walletsTable.walletAddress, walletAddress), eq(walletsTable.network, network)))
+    .where(and(
+      eq(walletsTable.walletAddress, normalizeWalletAddress(walletAddress, network)),
+      eq(walletsTable.network, network),
+      eq(walletsTable.userId, req.authUser!.id),
+    ))
     .limit(1);
 
   if (existing.length === 0) {

@@ -19,21 +19,14 @@ async function getOrCreateConfig() {
 }
 
 router.post("/faucet/claim", async (req, res) => {
-  const body = ClaimFaucetBody.parse(req.body);
-
-  const wallet = await db
-    .select()
-    .from(walletsTable)
-    .where(
-      and(
-        eq(walletsTable.walletAddress, body.walletAddress),
-        eq(walletsTable.network, body.network),
-      ),
-    )
-    .limit(1);
-
-  if (wallet.length > 0 && wallet[0].isFrozen) {
-    res.status(400).json({ error: "Wallet is frozen and cannot claim tokens" });
+  const parsedBody = ClaimFaucetBody.safeParse(req.body);
+  if (!parsedBody.success) {
+    res.status(400).json({ error: parsedBody.error.issues[0]?.message ?? "Invalid faucet request." });
+    return;
+  }
+  const body = parsedBody.data;
+  if ((body.network === "tezos") !== (body.tokenType === "USDtz-SIM")) {
+    res.status(400).json({ error: "USDtz-SIM is only available on Tezos; use USDT-SIM on Ethereum, BNB, or Tron." });
     return;
   }
 
@@ -46,66 +39,73 @@ router.post("/faucet/claim", async (req, res) => {
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);
 
-  const todayClaims = await db
-    .select({ total: sql<string>`COALESCE(SUM(${faucetClaimsTable.amount}), 0)` })
-    .from(faucetClaimsTable)
-    .where(
-      and(
-        eq(faucetClaimsTable.walletAddress, body.walletAddress),
-        eq(faucetClaimsTable.network, body.network),
-        eq(faucetClaimsTable.tokenType, body.tokenType),
-        gte(faucetClaimsTable.claimedAt, startOfDay),
-      ),
-    );
-
-  const claimedToday = parseFloat(todayClaims[0]?.total ?? "0");
-
-  if (claimedToday >= dailyLimit) {
-    const tomorrow = new Date(startOfDay);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    res.status(429).json({ error: `Daily faucet limit of ${dailyLimit} reached. Try again after ${tomorrow.toISOString()}` });
+  const walletAddress = body.network === "ethereum" || body.network === "bnb"
+    ? body.walletAddress.toLowerCase()
+    : body.walletAddress;
+  const txHash = `SIM-${crypto.randomUUID()}`;
+  const userId = req.authUser?.id;
+  if (!userId) {
+    res.status(401).json({ error: "Sign in to claim test tokens." });
     return;
   }
 
-  const claimAmount = Math.min(100, dailyLimit - claimedToday);
-  const txHash = "0x" + crypto.randomBytes(32).toString("hex");
+  const result = await db.transaction(async (tx) => {
+    const wallet = await tx.select().from(walletsTable).where(and(
+      eq(walletsTable.walletAddress, walletAddress),
+      eq(walletsTable.network, body.network),
+      eq(walletsTable.userId, userId),
+    )).limit(1).for("update");
+    if (wallet.length === 0) return { error: "Connect this wallet before claiming test tokens.", status: 404 as const };
+    if (wallet[0].isFrozen) return { error: "Wallet is frozen and cannot claim tokens.", status: 400 as const };
 
-  await db.insert(faucetClaimsTable).values({
-    walletAddress: body.walletAddress,
-    network: body.network,
-    tokenType: body.tokenType,
-    amount: claimAmount.toString(),
-  });
+    const todayClaims = await tx
+      .select({ total: sql<string>`COALESCE(SUM(${faucetClaimsTable.amount}), 0)` })
+      .from(faucetClaimsTable)
+      .where(and(
+        eq(faucetClaimsTable.walletAddress, walletAddress),
+        eq(faucetClaimsTable.network, body.network),
+        eq(faucetClaimsTable.tokenType, body.tokenType),
+        gte(faucetClaimsTable.claimedAt, startOfDay),
+      ));
+    const claimedToday = parseFloat(todayClaims[0]?.total ?? "0");
+    if (claimedToday >= dailyLimit) return { error: `Daily faucet limit of ${dailyLimit} reached.`, status: 429 as const };
 
-  const txType = "faucet";
-  await db.insert(transactionsTable).values({
-    txHash,
-    type: txType,
-    walletAddress: body.walletAddress,
-    network: body.network,
-    tokenType: body.tokenType,
-    amount: claimAmount.toString(),
-  });
-
-  if (wallet.length > 0) {
+    const claimAmount = Math.min(100, dailyLimit - claimedToday);
+    await tx.insert(faucetClaimsTable).values({
+      walletAddress,
+      network: body.network,
+      tokenType: body.tokenType,
+      amount: claimAmount.toString(),
+    });
+    await tx.insert(transactionsTable).values({
+      txHash,
+      type: "faucet",
+      walletAddress,
+      network: body.network,
+      tokenType: body.tokenType,
+      amount: claimAmount.toString(),
+    });
     if (body.tokenType === "USDtz-SIM") {
-      await db
-        .update(walletsTable)
-        .set({
-          usdtzSimBalance: sql`${walletsTable.usdtzSimBalance} + ${claimAmount}`,
-          lastSeenAt: new Date(),
-        })
-        .where(eq(walletsTable.id, wallet[0].id));
+      await tx.update(walletsTable).set({
+        usdtzSimBalance: sql`${walletsTable.usdtzSimBalance} + ${claimAmount}`,
+        lastSeenAt: new Date(),
+      }).where(eq(walletsTable.id, wallet[0].id));
     } else {
-      await db
-        .update(walletsTable)
-        .set({
-          usdtSimBalance: sql`${walletsTable.usdtSimBalance} + ${claimAmount}`,
-          lastSeenAt: new Date(),
-        })
-        .where(eq(walletsTable.id, wallet[0].id));
+      await tx.update(walletsTable).set({
+        usdtSimBalance: sql`${walletsTable.usdtSimBalance} + ${claimAmount}`,
+        lastSeenAt: new Date(),
+      }).where(eq(walletsTable.id, wallet[0].id));
     }
+    return { claimAmount, claimedToday };
+  });
+
+  if ("error" in result) {
+    res.status(result.status).json({ error: result.error });
+    return;
   }
+
+  const claimAmount = result.claimAmount;
+  const claimedToday = result.claimedToday;
 
   const remaining = dailyLimit - claimedToday - claimAmount;
 
@@ -121,6 +121,23 @@ router.post("/faucet/claim", async (req, res) => {
 
 router.get("/faucet/status", async (req, res) => {
   const query = GetFaucetStatusQueryParams.parse(req.query);
+  const userId = req.authUser?.id;
+  if (!userId) {
+    res.status(401).json({ error: "Sign in to check faucet status." });
+    return;
+  }
+  const walletAddress = query.network === "ethereum" || query.network === "bnb"
+    ? query.walletAddress.toLowerCase()
+    : query.walletAddress;
+  const wallet = await db.select({ id: walletsTable.id }).from(walletsTable).where(and(
+    eq(walletsTable.walletAddress, walletAddress),
+    eq(walletsTable.network, query.network),
+    eq(walletsTable.userId, userId),
+  )).limit(1);
+  if (wallet.length === 0) {
+    res.status(404).json({ error: "Wallet not found. Connect it first." });
+    return;
+  }
   const config = await getOrCreateConfig();
 
   const dailyLimit =
@@ -138,7 +155,7 @@ router.get("/faucet/status", async (req, res) => {
     .from(faucetClaimsTable)
     .where(
       and(
-        eq(faucetClaimsTable.walletAddress, query.walletAddress),
+        eq(faucetClaimsTable.walletAddress, walletAddress),
         eq(faucetClaimsTable.network, query.network),
         eq(faucetClaimsTable.tokenType, tokenType),
         gte(faucetClaimsTable.claimedAt, startOfDay),
@@ -156,7 +173,7 @@ router.get("/faucet/status", async (req, res) => {
   }
 
   res.json({
-    walletAddress: query.walletAddress,
+    walletAddress,
     network: query.network,
     claimedToday,
     dailyLimit,

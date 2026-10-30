@@ -2,20 +2,47 @@ import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { transactionsTable } from "@workspace/db/schema";
 import { GetTransactionsQueryParams, GetTransactionSummaryQueryParams } from "@workspace/api-zod";
-import { eq, and, sql, desc, count } from "drizzle-orm";
+import { eq, and, sql, desc, count, inArray } from "drizzle-orm";
+import { walletsTable } from "@workspace/db/schema";
 
 const router: IRouter = Router();
 
 router.get("/transactions", async (req, res) => {
   const query = GetTransactionsQueryParams.parse(req.query);
+  const userId = req.authUser?.id;
+  if (!userId) {
+    res.status(401).json({ error: "Sign in to view transactions." });
+    return;
+  }
 
   const limit = query.limit ?? 20;
   const offset = query.offset ?? 0;
 
-  const conditions = [];
-  if (query.walletAddress) {
-    conditions.push(eq(transactionsTable.walletAddress, query.walletAddress));
+  const ownedWallets = await db.select({
+    walletAddress: walletsTable.walletAddress,
+    network: walletsTable.network,
+  }).from(walletsTable).where(eq(walletsTable.userId, userId));
+  const requestedAddress = query.walletAddress?.toLowerCase();
+  const visibleAddresses = ownedWallets
+    .filter((wallet) => !query.network || wallet.network === query.network)
+    .filter((wallet) => !query.walletAddress || (
+      wallet.walletAddress === (wallet.network === "ethereum" || wallet.network === "bnb"
+        ? requestedAddress
+        : query.walletAddress)
+    ))
+    .map((wallet) => wallet.walletAddress);
+
+  if (query.walletAddress && visibleAddresses.length === 0) {
+    res.status(404).json({ error: "Wallet not found on this account." });
+    return;
   }
+  if (visibleAddresses.length === 0) {
+    res.json({ transactions: [], total: 0 });
+    return;
+  }
+
+  const conditions = [];
+  conditions.push(inArray(transactionsTable.walletAddress, visibleAddresses));
   if (query.network) {
     conditions.push(eq(transactionsTable.network, query.network));
   }
@@ -44,13 +71,30 @@ router.get("/transactions", async (req, res) => {
 
 router.get("/transactions/summary", async (req, res) => {
   const query = GetTransactionSummaryQueryParams.parse(req.query);
+  const userId = req.authUser?.id;
+  if (!userId) {
+    res.status(401).json({ error: "Sign in to view the transaction summary." });
+    return;
+  }
+  const walletAddress = query.network === "ethereum" || query.network === "bnb"
+    ? query.walletAddress.toLowerCase()
+    : query.walletAddress;
+  const wallet = await db.select({ id: walletsTable.id }).from(walletsTable).where(and(
+    eq(walletsTable.walletAddress, walletAddress),
+    eq(walletsTable.network, query.network),
+    eq(walletsTable.userId, userId),
+  )).limit(1);
+  if (wallet.length === 0) {
+    res.status(404).json({ error: "Wallet not found on this account." });
+    return;
+  }
 
   const rows = await db
     .select()
     .from(transactionsTable)
     .where(
       and(
-        eq(transactionsTable.walletAddress, query.walletAddress),
+        eq(transactionsTable.walletAddress, walletAddress),
         eq(transactionsTable.network, query.network),
       ),
     );
