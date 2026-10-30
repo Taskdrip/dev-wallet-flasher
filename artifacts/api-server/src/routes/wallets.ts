@@ -4,6 +4,7 @@ import { transactionsTable, walletsTable } from "@workspace/db/schema";
 import { GetWalletParams, GetWalletQueryParams, RegisterWalletBody, TopUpWalletBody } from "@workspace/api-zod";
 import { eq, and, sql } from "drizzle-orm";
 import crypto from "crypto";
+import { isValidWalletAddress } from "../lib/wallet-address";
 
 const router: IRouter = Router();
 
@@ -19,6 +20,10 @@ router.post("/wallets/register", async (req, res) => {
     return;
   }
   const walletAddress = normalizeWalletAddress(body.walletAddress, body.network);
+  if (!isValidWalletAddress(walletAddress, body.network)) {
+    res.status(400).json({ error: `Enter a valid ${body.network} testnet wallet address.` });
+    return;
+  }
 
   const existing = await db
     .select()
@@ -159,7 +164,7 @@ router.post("/wallets/:walletAddress/topup", async (req, res) => {
   });
 
   if ("error" in result) {
-    res.status(result.status).json({ error: result.error });
+    res.status(result.status ?? 400).json({ error: result.error });
     return;
   }
 

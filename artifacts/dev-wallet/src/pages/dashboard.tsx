@@ -23,21 +23,19 @@ export default function Dashboard() {
   const [topupAmount, setTopupAmount] = useState('');
   const autoRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  if (!address || !network) return <Redirect to="/" />;
-
-  const chain = CHAINS.find(c => c.id === network);
-
-  const walletQueryKey = getGetWalletQueryKey(address, { network: network as 'tezos' | 'ethereum' });
-  const summaryQueryKey = getGetTransactionSummaryQueryKey({ walletAddress: address, network });
+  const safeAddress = address ?? '';
+  const safeNetwork = network ?? 'ethereum';
+  const walletQueryKey = getGetWalletQueryKey(safeAddress, { network: safeNetwork });
+  const summaryQueryKey = getGetTransactionSummaryQueryKey({ walletAddress: safeAddress, network: safeNetwork });
 
   const { data: wallet, isLoading: walletLoading } = useGetWallet(
-    address,
-    { network: network as 'tezos' | 'ethereum' },
+    safeAddress,
+    { network: safeNetwork },
     { query: { enabled: !!address && !!network, queryKey: walletQueryKey } }
   );
 
   const { data: summary, isLoading: summaryLoading } = useGetTransactionSummary(
-    { walletAddress: address, network },
+    { walletAddress: safeAddress, network: safeNetwork },
     { query: { enabled: !!address && !!network, queryKey: summaryQueryKey } }
   );
 
@@ -48,20 +46,25 @@ export default function Dashboard() {
   const balance = network === 'tezos' ? (wallet?.usdtzSimBalance ?? 0) : (wallet?.usdtSimBalance ?? 0);
   const isAutoOn = wallet?.autoAccumulate ?? false;
 
-  // Auto-accumulate simulation: when enabled, add tokens every 5s
   useEffect(() => {
     if (isAutoOn && address && network) {
       autoRef.current = setInterval(() => {
-        queryClient.invalidateQueries({ queryKey: walletQueryKey });
+        queryClient.invalidateQueries({
+          queryKey: getGetWalletQueryKey(address, { network }),
+        });
       }, 5000);
     }
     return () => { if (autoRef.current) clearInterval(autoRef.current); };
-  }, [isAutoOn, address, network]);
+  }, [isAutoOn, address, network, queryClient]);
+
+  if (!address || !network) return <Redirect to="/" />;
+
+  const chain = CHAINS.find(c => c.id === network);
 
   const handleTopUp = async () => {
     const amt = parseFloat(topupAmount);
     if (!Number.isFinite(amt) || amt < 0.000001 || amt > 200_000_000 || !Number.isInteger(amt * 1_000_000)) {
-      toast({ variant: 'destructive', title: 'Invalid amount', description: 'Enter an amount between 1 and 200,000,000' });
+      toast({ variant: 'destructive', title: 'Invalid amount', description: 'Enter an amount between 0.000001 and 200,000,000.' });
       return;
     }
     try {
@@ -90,7 +93,9 @@ export default function Dashboard() {
       queryClient.invalidateQueries({ queryKey: walletQueryKey });
       toast({
         title: isAutoOn ? 'Auto-accumulate paused' : 'Auto-accumulate enabled',
-        description: isAutoOn ? 'Smart contract paused.' : 'USDT is now accumulating automatically.',
+        description: isAutoOn
+          ? 'The simulated auto-accumulate setting is now off.'
+          : 'The simulated auto-accumulate setting is now on. No smart contract is running.',
       });
     } catch {
       toast({ variant: 'destructive', title: 'Failed to toggle auto-accumulate' });
@@ -160,7 +165,7 @@ export default function Dashboard() {
                 Auto {isAutoOn ? 'ON' : 'OFF'}
               </button>
               {isAutoOn && (
-                <p className="text-violet-400 text-xs">Smart contract active</p>
+                <p className="text-violet-400 text-xs">Simulation setting enabled</p>
               )}
             </div>
           </div>

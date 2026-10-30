@@ -11,15 +11,17 @@ import { format } from 'date-fns';
 
 export default function Transactions() {
   const { address, network } = useWallet();
+  const safeAddress = address ?? '';
+  const safeNetwork = network ?? 'ethereum';
+
+  const { data, isLoading } = useGetTransactions(
+    { walletAddress: safeAddress, network: safeNetwork, limit: 50 },
+    { query: { enabled: !!address && !!network, queryKey: getGetTransactionsQueryKey({ walletAddress: safeAddress, network: safeNetwork, limit: 50 }) } }
+  );
 
   if (!address || !network) {
     return <Redirect to="/" />;
   }
-
-  const { data, isLoading } = useGetTransactions(
-    { walletAddress: address, network: network as any, limit: 50 },
-    { query: { enabled: !!address && !!network, queryKey: getGetTransactionsQueryKey({ walletAddress: address, network: network as any, limit: 50 }) } }
-  );
 
   const getTxIcon = (type: string) => {
     switch (type) {

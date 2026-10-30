@@ -18,9 +18,6 @@ const signupSchema = z.object({
   email: z.union([z.string().trim().email().max(254), z.literal("")]).optional(),
   phone: z.union([z.string().trim().regex(/^\+[1-9]\d{7,14}$/, "Use international format, such as +14155552671."), z.literal("")]).optional(),
   password: z.string().min(10, "Password must be at least 10 characters.").max(128),
-}).refine((data) => Boolean(data.email?.trim() || data.phone?.trim()), {
-  message: "Add an email address or phone number.",
-  path: ["email"],
 });
 
 const signinSchema = z.object({

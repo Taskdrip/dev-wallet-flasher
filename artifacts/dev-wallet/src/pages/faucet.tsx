@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useWallet } from '@/context/WalletContext';
 import { useGetFaucetStatus, getGetFaucetStatusQueryKey, useClaimFaucet, getGetWalletQueryKey, getGetTransactionSummaryQueryKey } from '@workspace/api-client-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Droplets, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
 import { Redirect } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
@@ -16,26 +15,28 @@ export default function Faucet() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
-  const [tokenType, setTokenType] = useState<string>('USDtz-SIM');
+  const safeAddress = address ?? '';
+  const safeNetwork = network ?? 'ethereum';
+  const tokenType = safeNetwork === 'tezos' ? 'USDtz-SIM' : 'USDT-SIM';
+
+  const { data: status, isLoading, refetch } = useGetFaucetStatus(
+    { walletAddress: safeAddress, network: safeNetwork },
+    { query: { enabled: !!address && !!network, queryKey: getGetFaucetStatusQueryKey({ walletAddress: safeAddress, network: safeNetwork }) } }
+  );
+
+  const claimMutation = useClaimFaucet();
 
   if (!address || !network) {
     return <Redirect to="/" />;
   }
-
-  const { data: status, isLoading, refetch } = useGetFaucetStatus(
-    { walletAddress: address, network: network as any },
-    { query: { enabled: !!address && !!network, queryKey: getGetFaucetStatusQueryKey({ walletAddress: address, network: network as any }) } }
-  );
-
-  const claimMutation = useClaimFaucet();
 
   const handleClaim = async () => {
     try {
       await claimMutation.mutateAsync({
         data: {
           walletAddress: address,
-          network: network as any,
-          tokenType: tokenType as any
+          network,
+          tokenType
         }
       });
       
@@ -45,14 +46,14 @@ export default function Faucet() {
       });
       
       // Invalidate relevant queries
-      queryClient.invalidateQueries({ queryKey: getGetWalletQueryKey(address, { network: network as any }) });
-      queryClient.invalidateQueries({ queryKey: getGetFaucetStatusQueryKey({ walletAddress: address, network: network as any }) });
-      queryClient.invalidateQueries({ queryKey: getGetTransactionSummaryQueryKey({ walletAddress: address, network: network as string }) });
+      queryClient.invalidateQueries({ queryKey: getGetWalletQueryKey(address, { network }) });
+      queryClient.invalidateQueries({ queryKey: getGetFaucetStatusQueryKey({ walletAddress: address, network }) });
+      queryClient.invalidateQueries({ queryKey: getGetTransactionSummaryQueryKey({ walletAddress: address, network }) });
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Claim Failed",
-        description: error?.response?.data?.error || "An unknown error occurred",
+        description: error instanceof Error ? error.message : "Could not claim test tokens.",
       });
     }
   };
@@ -106,16 +107,10 @@ export default function Faucet() {
           )}
 
           <div className="space-y-3 pt-4 border-t border-border/50">
-            <label className="text-sm font-medium">Select Token to Claim</label>
-            <Select value={tokenType} onValueChange={setTokenType}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select token type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="USDtz-SIM">USDtz-SIM</SelectItem>
-                <SelectItem value="USDT-SIM">USDT-SIM</SelectItem>
-              </SelectContent>
-            </Select>
+            <p className="text-sm font-medium">Test token for this network</p>
+            <div className="rounded-md border border-border/50 bg-muted/20 px-3 py-2 text-sm font-semibold">
+              {tokenType}
+            </div>
           </div>
         </CardContent>
         <CardFooter>

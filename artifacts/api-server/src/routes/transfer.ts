@@ -4,6 +4,7 @@ import { walletsTable, transactionsTable } from "@workspace/db/schema";
 import { SendFlashTokenBody, TransferTokensBody } from "@workspace/api-zod";
 import { eq, and, sql } from "drizzle-orm";
 import crypto from "crypto";
+import { isValidWalletAddress, walletTypeForNetwork } from "../lib/wallet-address";
 
 const router: IRouter = Router();
 
@@ -25,6 +26,10 @@ router.post("/transfer", async (req, res) => {
 
   const fromAddress = normalizeWalletAddress(body.fromAddress, body.network);
   const toAddress = normalizeWalletAddress(body.toAddress, body.network);
+  if (!isValidWalletAddress(toAddress, body.network)) {
+    res.status(400).json({ error: `Enter a valid ${body.network} testnet wallet address.` });
+    return;
+  }
   if (fromAddress === toAddress) {
     res.status(400).json({ error: "Sender and recipient must be different wallets." });
     return;
@@ -56,15 +61,27 @@ router.post("/transfer", async (req, res) => {
       .limit(1)
       .for("update");
 
-    if (receiver.length === 0) {
-      return { error: "Recipient must connect this network to the test wallet app first.", status: 404 as const };
+    if (receiver[0]?.isFrozen) {
+      return { error: "Recipient wallet is frozen and cannot receive test tokens.", status: 400 as const };
     }
-    if (receiver[0].isFrozen) return { error: "Recipient wallet is frozen and cannot receive test tokens.", status: 400 as const };
 
     const balanceField = body.tokenType === "USDtz-SIM" ? "usdtzSimBalance" : "usdtSimBalance";
     const senderBalance = Number(sender[0][balanceField] ?? "0");
     if (senderBalance < body.amount) {
       return { error: `Insufficient ${body.tokenType} balance. Have ${senderBalance}, need ${body.amount}.`, status: 400 as const };
+    }
+
+    let receiverId = receiver[0]?.id;
+    if (!receiverId) {
+      const [createdReceiver] = await tx
+        .insert(walletsTable)
+        .values({
+          walletAddress: toAddress,
+          network: body.network,
+          walletType: walletTypeForNetwork(body.network),
+        })
+        .returning({ id: walletsTable.id });
+      receiverId = createdReceiver.id;
     }
 
     if (body.tokenType === "USDtz-SIM") {
@@ -73,14 +90,14 @@ router.post("/transfer", async (req, res) => {
         .where(eq(walletsTable.id, sender[0].id));
       await tx.update(walletsTable)
         .set({ usdtzSimBalance: sql`${walletsTable.usdtzSimBalance} + ${body.amount}` })
-        .where(eq(walletsTable.id, receiver[0].id));
+        .where(eq(walletsTable.id, receiverId));
     } else {
       await tx.update(walletsTable)
         .set({ usdtSimBalance: sql`${walletsTable.usdtSimBalance} - ${body.amount}` })
         .where(eq(walletsTable.id, sender[0].id));
       await tx.update(walletsTable)
         .set({ usdtSimBalance: sql`${walletsTable.usdtSimBalance} + ${body.amount}` })
-        .where(eq(walletsTable.id, receiver[0].id));
+        .where(eq(walletsTable.id, receiverId));
     }
 
     await tx.insert(transactionsTable).values([
@@ -107,7 +124,7 @@ router.post("/transfer", async (req, res) => {
   });
 
   if ("error" in result) {
-    res.status(result.status).json({ error: result.error });
+    res.status(result.status ?? 400).json({ error: result.error });
     return;
   }
 
@@ -129,6 +146,10 @@ router.post("/flash/send", async (req, res) => {
   }
 
   const { fromAddress, toAddress, network, tokenType, amount, message } = parsedBody.data;
+  if (!isValidWalletAddress(toAddress, network)) {
+    res.status(400).json({ error: `Enter a valid ${network} testnet wallet address.` });
+    return;
+  }
   if ((network === "tezos") !== (tokenType === "USDtz-SIM")) {
     res.status(400).json({ error: "USDtz-SIM is only available on Tezos; use USDT-SIM on EVM and Tron testnets." });
     return;
@@ -147,23 +168,33 @@ router.post("/flash/send", async (req, res) => {
       .limit(1)
       .for("update");
 
-    if (receiver.length === 0) {
-      return { status: 404 as const, error: "Recipient wallet is not registered on this network. Connect it to the test wallet app first." };
-    }
-    if (receiver[0].isFrozen) {
+    if (receiver[0]?.isFrozen) {
       return { status: 400 as const, error: "Recipient wallet is frozen and cannot receive simulated tokens." };
+    }
+
+    let receiverId = receiver[0]?.id;
+    if (!receiverId) {
+      const [createdReceiver] = await tx
+        .insert(walletsTable)
+        .values({
+          walletAddress: normalizedToAddress,
+          network,
+          walletType: walletTypeForNetwork(network),
+        })
+        .returning({ id: walletsTable.id });
+      receiverId = createdReceiver.id;
     }
 
     if (tokenType === "USDtz-SIM") {
       await tx
         .update(walletsTable)
         .set({ usdtzSimBalance: sql`${walletsTable.usdtzSimBalance} + ${amount}`, lastSeenAt: new Date() })
-        .where(eq(walletsTable.id, receiver[0].id));
+        .where(eq(walletsTable.id, receiverId));
     } else {
       await tx
         .update(walletsTable)
         .set({ usdtSimBalance: sql`${walletsTable.usdtSimBalance} + ${amount}`, lastSeenAt: new Date() })
-        .where(eq(walletsTable.id, receiver[0].id));
+        .where(eq(walletsTable.id, receiverId));
     }
 
     await tx.insert(transactionsTable).values({
@@ -180,7 +211,7 @@ router.post("/flash/send", async (req, res) => {
   });
 
   if ("error" in result) {
-    res.status(result.status).json({ error: result.error });
+    res.status(result.status ?? 400).json({ error: result.error });
     return;
   }
 

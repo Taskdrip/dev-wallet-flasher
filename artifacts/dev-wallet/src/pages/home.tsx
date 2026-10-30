@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Shield, Zap, ArrowDownLeft, ArrowUpRight, RefreshCw, BookOpen, ChevronRight } from 'lucide-react';
 import { Link } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
+import { MarketPrices } from '@/components/market-prices';
+import walletHero from '@assets/generated_images/wallet-hero.jpg';
 
 const CHAIN_ICONS: Record<string, string> = {
   ethereum: 'ETH',
@@ -68,6 +70,13 @@ export default function Home() {
     <div className="relative min-h-screen overflow-hidden -mt-8 -mx-4 md:-mx-8">
       {/* Animated crypto background */}
       <div className="absolute inset-0 bg-[#050a14]">
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage: `linear-gradient(180deg, rgba(5,10,20,.46) 0%, rgba(5,10,20,.74) 35%, #050a14 100%), url(${walletHero})`,
+            backgroundPosition: 'center 22%',
+          }}
+        />
         <div className="absolute inset-0" style={{
           backgroundImage: `
             radial-gradient(ellipse 80% 50% at 20% 40%, rgba(37,99,235,0.15) 0%, transparent 60%),
@@ -123,6 +132,8 @@ export default function Home() {
           </div>
         </div>
 
+        <MarketPrices />
+
         <div className="max-w-2xl mx-auto mb-10">
           {!user ? (
             <div className="rounded-2xl border border-slate-700/70 bg-slate-900/85 p-5 md:p-7 shadow-xl">
@@ -132,7 +143,7 @@ export default function Home() {
                     {authMode === 'signup' ? 'Create your account' : 'Sign in to continue'}
                   </h2>
                   <p className="text-slate-400 text-sm mt-1">
-                    Sign in first, then connect a wallet on a supported test network.
+                    Sign in to your app account, then connect a browser wallet on a supported test network.
                   </p>
                 </div>
                 <Shield className="h-5 w-5 text-blue-400 shrink-0 mt-1" />
@@ -179,7 +190,7 @@ export default function Home() {
                       </label>
                     </div>
                     <p className="text-[11px] text-slate-500">
-                      Add an email or phone to use it for sign-in. Contact details are not verified.
+                      Email and phone are optional. Any saved username, email, or phone can be used to sign in; contact details are not verified.
                     </p>
                   </>
                 ) : (
@@ -232,7 +243,7 @@ export default function Home() {
                 <p className="text-xs uppercase tracking-widest text-emerald-400 font-bold">Account signed in</p>
                 <p className="text-white font-semibold mt-1">@{user.username}</p>
               </div>
-              <p className="text-slate-400 text-sm">Choose a test network and connect your wallet below.</p>
+              <p className="text-slate-400 text-sm">Your app account is ready. Choose a test network and connect your browser wallet below.</p>
             </div>
           )}
         </div>

@@ -242,6 +242,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     const permission = await requestTemplePermission(
       'ghostnet',
       { name: 'Dev Wallet Connector' },
+      false,
     );
     await handleConnect(permission.pkh, chain.id, 'temple');
   };
