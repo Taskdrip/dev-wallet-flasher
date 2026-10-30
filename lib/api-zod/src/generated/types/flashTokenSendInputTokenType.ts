@@ -6,10 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type TopUpBodyTokenType = typeof TopUpBodyTokenType[keyof typeof TopUpBodyTokenType];
+export type FlashTokenSendInputTokenType = typeof FlashTokenSendInputTokenType[keyof typeof FlashTokenSendInputTokenType];
 
 
-export const TopUpBodyTokenType = {
+export const FlashTokenSendInputTokenType = {
   'USDtz-SIM': 'USDtz-SIM',
   'USDT-SIM': 'USDT-SIM',
 } as const;

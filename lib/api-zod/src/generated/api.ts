@@ -90,7 +90,7 @@ export const GetTransactionsQueryParams = zod.object({
 
 export const GetTransactionsResponse = zod.object({
   "transactions": zod.array(zod.object({
-  "id": zod.int(),
+  "id": zod.number().int(),
   "txHash": zod.string(),
   "type": zod.enum(['faucet', 'transfer_in', 'transfer_out', 'topup']),
   "walletAddress": zod.string(),
@@ -100,7 +100,7 @@ export const GetTransactionsResponse = zod.object({
   "amount": zod.number(),
   "createdAt": zod.string()
 })),
-  "total": zod.int()
+  "total": zod.number().int()
 })
 
 
@@ -117,7 +117,7 @@ export const GetTransactionSummaryResponse = zod.object({
   "totalSent": zod.number(),
   "totalFaucetClaimed": zod.number(),
   "totalToppedUp": zod.number(),
-  "transactionCount": zod.int(),
+  "transactionCount": zod.number().int(),
   "usdtzSimBalance": zod.number(),
   "usdtSimBalance": zod.number()
 })
@@ -133,7 +133,7 @@ export const RegisterWalletBody = zod.object({
 })
 
 export const RegisterWalletResponse = zod.object({
-  "id": zod.int(),
+  "id": zod.number().int(),
   "walletAddress": zod.string(),
   "network": zod.string(),
   "walletType": zod.string(),
@@ -158,7 +158,7 @@ export const GetWalletQueryParams = zod.object({
 })
 
 export const GetWalletResponse = zod.object({
-  "id": zod.int(),
+  "id": zod.number().int(),
   "walletAddress": zod.string(),
   "network": zod.string(),
   "walletType": zod.string(),
@@ -175,14 +175,14 @@ export const GetWalletResponse = zod.object({
  * @summary Get admin dashboard statistics
  */
 export const GetAdminStatsResponse = zod.object({
-  "totalWallets": zod.int(),
-  "totalTezosWallets": zod.int(),
-  "totalEthereumWallets": zod.int(),
+  "totalWallets": zod.number().int(),
+  "totalTezosWallets": zod.number().int(),
+  "totalEthereumWallets": zod.number().int(),
   "totalUsdtzSimDistributed": zod.number(),
   "totalUsdtSimDistributed": zod.number(),
-  "totalTransactions": zod.int(),
-  "frozenWallets": zod.int(),
-  "todaysClaims": zod.int()
+  "totalTransactions": zod.number().int(),
+  "frozenWallets": zod.number().int(),
+  "todaysClaims": zod.number().int()
 })
 
 
@@ -199,7 +199,7 @@ export const GetAdminWalletsQueryParams = zod.object({
 
 export const GetAdminWalletsResponse = zod.object({
   "wallets": zod.array(zod.object({
-  "id": zod.int(),
+  "id": zod.number().int(),
   "walletAddress": zod.string(),
   "network": zod.string(),
   "walletType": zod.string(),
@@ -210,7 +210,7 @@ export const GetAdminWalletsResponse = zod.object({
   "createdAt": zod.string(),
   "lastSeenAt": zod.string()
 })),
-  "total": zod.int()
+  "total": zod.number().int()
 })
 
 
@@ -226,7 +226,7 @@ export const FreezeWalletBody = zod.object({
 })
 
 export const FreezeWalletResponse = zod.object({
-  "id": zod.int(),
+  "id": zod.number().int(),
   "walletAddress": zod.string(),
   "network": zod.string(),
   "walletType": zod.string(),
@@ -259,7 +259,7 @@ export const TopUpWalletBody = zod.object({
 })
 
 export const TopUpWalletResponse = zod.object({
-  "id": zod.int(),
+  "id": zod.number().int(),
   "walletAddress": zod.string(),
   "network": zod.string(),
   "walletType": zod.string(),
@@ -285,7 +285,7 @@ export const ToggleAutoAccumulateBody = zod.object({
 })
 
 export const ToggleAutoAccumulateResponse = zod.object({
-  "id": zod.int(),
+  "id": zod.number().int(),
   "walletAddress": zod.string(),
   "network": zod.string(),
   "walletType": zod.string(),

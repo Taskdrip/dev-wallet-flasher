@@ -6,10 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type RegisterWalletBodyWalletType = typeof RegisterWalletBodyWalletType[keyof typeof RegisterWalletBodyWalletType];
+export type WalletRegistrationInputWalletType = typeof WalletRegistrationInputWalletType[keyof typeof WalletRegistrationInputWalletType];
 
 
-export const RegisterWalletBodyWalletType = {
+export const WalletRegistrationInputWalletType = {
   temple: 'temple',
   beacon: 'beacon',
   metamask: 'metamask',

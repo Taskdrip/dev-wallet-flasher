@@ -6,10 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type FlashSendBodyNetwork = typeof FlashSendBodyNetwork[keyof typeof FlashSendBodyNetwork];
+export type WalletRegistrationInputNetwork = typeof WalletRegistrationInputNetwork[keyof typeof WalletRegistrationInputNetwork];
 
 
-export const FlashSendBodyNetwork = {
+export const WalletRegistrationInputNetwork = {
   tezos: 'tezos',
   ethereum: 'ethereum',
   tron: 'tron',

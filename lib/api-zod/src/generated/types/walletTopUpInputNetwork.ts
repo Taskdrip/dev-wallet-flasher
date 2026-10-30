@@ -6,10 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type RegisterWalletBodyNetwork = typeof RegisterWalletBodyNetwork[keyof typeof RegisterWalletBodyNetwork];
+export type WalletTopUpInputNetwork = typeof WalletTopUpInputNetwork[keyof typeof WalletTopUpInputNetwork];
 
 
-export const RegisterWalletBodyNetwork = {
+export const WalletTopUpInputNetwork = {
   tezos: 'tezos',
   ethereum: 'ethereum',
   tron: 'tron',

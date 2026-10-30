@@ -186,7 +186,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/RegisterWalletBody"
+              $ref: "#/components/schemas/WalletRegistrationInput"
       responses:
         "200":
           description: Wallet registered
@@ -281,7 +281,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/FreezeWalletBody"
+              $ref: "#/components/schemas/WalletFreezeInput"
       responses:
         "200":
           description: Wallet freeze status updated
@@ -306,7 +306,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/TopUpBody"
+              $ref: "#/components/schemas/WalletTopUpInput"
       responses:
         "200":
           description: Top up successful
@@ -337,7 +337,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AutoAccumulateBody"
+              $ref: "#/components/schemas/AutoAccumulateInput"
       responses:
         "200":
           description: Auto-accumulate status updated
@@ -356,7 +356,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/FlashSendBody"
+              $ref: "#/components/schemas/FlashTokenSendInput"
       responses:
         "200":
           description: Flash tokens sent
@@ -392,7 +392,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateFaucetLimitsBody"
+              $ref: "#/components/schemas/FaucetLimitsUpdateInput"
       responses:
         "200":
           description: Faucet limits updated
@@ -599,7 +599,7 @@ components:
         - usdtzSimBalance
         - usdtSimBalance
 
-    RegisterWalletBody:
+    WalletRegistrationInput:
       type: object
       properties:
         walletAddress:
@@ -692,7 +692,7 @@ components:
         - wallets
         - total
 
-    FreezeWalletBody:
+    WalletFreezeInput:
       type: object
       properties:
         frozen:
@@ -714,7 +714,7 @@ components:
         - ethereumUsdtSimDailyLimit
         - updatedAt
 
-    UpdateFaucetLimitsBody:
+    FaucetLimitsUpdateInput:
       type: object
       properties:
         tezosUsdtzSimDailyLimit:
@@ -725,7 +725,7 @@ components:
         - tezosUsdtzSimDailyLimit
         - ethereumUsdtSimDailyLimit
 
-    TopUpBody:
+    WalletTopUpInput:
       type: object
       properties:
         network:
@@ -744,7 +744,7 @@ components:
         - tokenType
         - amount
 
-    AutoAccumulateBody:
+    AutoAccumulateInput:
       type: object
       properties:
         network:
@@ -755,7 +755,7 @@ components:
         - network
         - enabled
 
-    FlashSendBody:
+    FlashTokenSendInput:
       type: object
       properties:
         fromAddress:

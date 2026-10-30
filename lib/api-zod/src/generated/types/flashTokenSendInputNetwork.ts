@@ -6,10 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type TopUpBodyNetwork = typeof TopUpBodyNetwork[keyof typeof TopUpBodyNetwork];
+export type FlashTokenSendInputNetwork = typeof FlashTokenSendInputNetwork[keyof typeof FlashTokenSendInputNetwork];
 
 
-export const TopUpBodyNetwork = {
+export const FlashTokenSendInputNetwork = {
   tezos: 'tezos',
   ethereum: 'ethereum',
   tron: 'tron',

@@ -6,7 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface UpdateFaucetLimitsBody {
-  tezosUsdtzSimDailyLimit: number;
-  ethereumUsdtSimDailyLimit: number;
+export interface WalletFreezeInput {
+  frozen: boolean;
 }

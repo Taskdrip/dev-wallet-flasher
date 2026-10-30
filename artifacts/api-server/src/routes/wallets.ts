@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { transactionsTable, walletsTable } from "@workspace/db/schema";
-import { GetWalletParams, GetWalletQueryParams, RegisterWalletBody, TopUpBody } from "@workspace/api-zod";
+import { GetWalletParams, GetWalletQueryParams, RegisterWalletBody, TopUpWalletBody } from "@workspace/api-zod";
 import { eq, and, sql } from "drizzle-orm";
 import crypto from "crypto";
 
@@ -81,7 +81,7 @@ router.post("/wallets/:walletAddress/topup", async (req, res) => {
     return;
   }
 
-  const parsedBody = TopUpBody.safeParse(req.body);
+  const parsedBody = TopUpWalletBody.safeParse(req.body);
   if (!parsedBody.success) {
     res.status(400).json({ error: parsedBody.error.issues[0]?.message ?? "Invalid top-up request" });
     return;

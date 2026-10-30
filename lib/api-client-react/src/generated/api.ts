@@ -27,29 +27,29 @@ import type {
 import type {
   AdminStats,
   AdminWalletListResponse,
-  AutoAccumulateBody,
+  AutoAccumulateInput,
   ErrorResponse,
   FaucetClaimBody,
   FaucetClaimResult,
   FaucetLimits,
+  FaucetLimitsUpdateInput,
   FaucetStatus,
-  FlashSendBody,
   FlashSendResult,
-  FreezeWalletBody,
+  FlashTokenSendInput,
   GetAdminWalletsParams,
   GetFaucetStatusParams,
   GetTransactionSummaryParams,
   GetTransactionsParams,
   GetWalletParams,
   HealthStatus,
-  RegisterWalletBody,
-  TopUpBody,
   TransactionListResponse,
   TransactionSummary,
   TransferBody,
   TransferResult,
-  UpdateFaucetLimitsBody,
-  WalletRecord
+  WalletFreezeInput,
+  WalletRecord,
+  WalletRegistrationInput,
+  WalletTopUpInput
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -692,7 +692,7 @@ export const getRegisterWalletUrl = () => {
 /**
  * @summary Register a connected wallet
  */
-export const registerWallet = async (registerWalletBody: RegisterWalletBody, options?: Parameters<typeof customFetch>[1]): Promise<WalletRecord> => {
+export const registerWallet = async (walletRegistrationInput: WalletRegistrationInput, options?: Parameters<typeof customFetch>[1]): Promise<WalletRecord> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -713,7 +713,7 @@ return customFetch<WalletRecord>(getRegisterWalletUrl(),
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(registerWalletBody)
+    body: JSON.stringify(walletRegistrationInput)
   }
 );}
 
@@ -751,9 +751,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type RegisterWalletMutationResult = NonNullable<Awaited<ReturnType<typeof registerWallet>>>
-    export type RegisterWalletMutationBody = BodyType<RegisterWalletBody>
+    export type RegisterWalletMutationBody = BodyType<WalletRegistrationInput>
     export type RegisterWalletMutationError = ErrorType<unknown>
-    export type RegisterWalletMutationVariables = {data: BodyType<RegisterWalletBody>}
+    export type RegisterWalletMutationVariables = {data: BodyType<WalletRegistrationInput>}
 
     /**
  * @summary Register a connected wallet
@@ -1106,7 +1106,7 @@ export const getFreezeWalletUrl = (walletAddress: string,) => {
  * @summary Freeze or unfreeze a wallet
  */
 export const freezeWallet = async (walletAddress: string,
-    freezeWalletBody: FreezeWalletBody, options?: Parameters<typeof customFetch>[1]): Promise<WalletRecord> => {
+    walletFreezeInput: WalletFreezeInput, options?: Parameters<typeof customFetch>[1]): Promise<WalletRecord> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -1127,7 +1127,7 @@ return customFetch<WalletRecord>(getFreezeWalletUrl(walletAddress),
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(freezeWalletBody)
+    body: JSON.stringify(walletFreezeInput)
   }
 );}
 
@@ -1165,9 +1165,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type FreezeWalletMutationResult = NonNullable<Awaited<ReturnType<typeof freezeWallet>>>
-    export type FreezeWalletMutationBody = BodyType<FreezeWalletBody>
+    export type FreezeWalletMutationBody = BodyType<WalletFreezeInput>
     export type FreezeWalletMutationError = ErrorType<unknown>
-    export type FreezeWalletMutationVariables = {walletAddress: string;data: BodyType<FreezeWalletBody>}
+    export type FreezeWalletMutationVariables = {walletAddress: string;data: BodyType<WalletFreezeInput>}
 
     /**
  * @summary Freeze or unfreeze a wallet
@@ -1195,7 +1195,7 @@ export const getTopUpWalletUrl = (walletAddress: string,) => {
  * @summary Top up simulated token balance (up to $200,000,000)
  */
 export const topUpWallet = async (walletAddress: string,
-    topUpBody: TopUpBody, options?: Parameters<typeof customFetch>[1]): Promise<WalletRecord> => {
+    walletTopUpInput: WalletTopUpInput, options?: Parameters<typeof customFetch>[1]): Promise<WalletRecord> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -1216,7 +1216,7 @@ return customFetch<WalletRecord>(getTopUpWalletUrl(walletAddress),
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(topUpBody)
+    body: JSON.stringify(walletTopUpInput)
   }
 );}
 
@@ -1254,9 +1254,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type TopUpWalletMutationResult = NonNullable<Awaited<ReturnType<typeof topUpWallet>>>
-    export type TopUpWalletMutationBody = BodyType<TopUpBody>
+    export type TopUpWalletMutationBody = BodyType<WalletTopUpInput>
     export type TopUpWalletMutationError = ErrorType<ErrorResponse>
-    export type TopUpWalletMutationVariables = {walletAddress: string;data: BodyType<TopUpBody>}
+    export type TopUpWalletMutationVariables = {walletAddress: string;data: BodyType<WalletTopUpInput>}
 
     /**
  * @summary Top up simulated token balance (up to $200,000,000)
@@ -1284,7 +1284,7 @@ export const getToggleAutoAccumulateUrl = (walletAddress: string,) => {
  * @summary Toggle auto-accumulation smart contract simulation
  */
 export const toggleAutoAccumulate = async (walletAddress: string,
-    autoAccumulateBody: AutoAccumulateBody, options?: Parameters<typeof customFetch>[1]): Promise<WalletRecord> => {
+    autoAccumulateInput: AutoAccumulateInput, options?: Parameters<typeof customFetch>[1]): Promise<WalletRecord> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -1305,7 +1305,7 @@ return customFetch<WalletRecord>(getToggleAutoAccumulateUrl(walletAddress),
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(autoAccumulateBody)
+    body: JSON.stringify(autoAccumulateInput)
   }
 );}
 
@@ -1343,9 +1343,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type ToggleAutoAccumulateMutationResult = NonNullable<Awaited<ReturnType<typeof toggleAutoAccumulate>>>
-    export type ToggleAutoAccumulateMutationBody = BodyType<AutoAccumulateBody>
+    export type ToggleAutoAccumulateMutationBody = BodyType<AutoAccumulateInput>
     export type ToggleAutoAccumulateMutationError = ErrorType<unknown>
-    export type ToggleAutoAccumulateMutationVariables = {walletAddress: string;data: BodyType<AutoAccumulateBody>}
+    export type ToggleAutoAccumulateMutationVariables = {walletAddress: string;data: BodyType<AutoAccumulateInput>}
 
     /**
  * @summary Toggle auto-accumulation smart contract simulation
@@ -1372,7 +1372,7 @@ export const getSendFlashTokenUrl = () => {
 /**
  * @summary Send flash test tokens to a wallet (developer tool)
  */
-export const sendFlashToken = async (flashSendBody: FlashSendBody, options?: Parameters<typeof customFetch>[1]): Promise<FlashSendResult> => {
+export const sendFlashToken = async (flashTokenSendInput: FlashTokenSendInput, options?: Parameters<typeof customFetch>[1]): Promise<FlashSendResult> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -1393,7 +1393,7 @@ return customFetch<FlashSendResult>(getSendFlashTokenUrl(),
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(flashSendBody)
+    body: JSON.stringify(flashTokenSendInput)
   }
 );}
 
@@ -1431,9 +1431,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type SendFlashTokenMutationResult = NonNullable<Awaited<ReturnType<typeof sendFlashToken>>>
-    export type SendFlashTokenMutationBody = BodyType<FlashSendBody>
+    export type SendFlashTokenMutationBody = BodyType<FlashTokenSendInput>
     export type SendFlashTokenMutationError = ErrorType<ErrorResponse>
-    export type SendFlashTokenMutationVariables = {data: BodyType<FlashSendBody>}
+    export type SendFlashTokenMutationVariables = {data: BodyType<FlashTokenSendInput>}
 
     /**
  * @summary Send flash test tokens to a wallet (developer tool)
@@ -1561,7 +1561,7 @@ export const getUpdateFaucetLimitsUrl = () => {
 /**
  * @summary Update faucet limits
  */
-export const updateFaucetLimits = async (updateFaucetLimitsBody: UpdateFaucetLimitsBody, options?: Parameters<typeof customFetch>[1]): Promise<FaucetLimits> => {
+export const updateFaucetLimits = async (faucetLimitsUpdateInput: FaucetLimitsUpdateInput, options?: Parameters<typeof customFetch>[1]): Promise<FaucetLimits> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -1582,7 +1582,7 @@ return customFetch<FaucetLimits>(getUpdateFaucetLimitsUrl(),
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(updateFaucetLimitsBody)
+    body: JSON.stringify(faucetLimitsUpdateInput)
   }
 );}
 
@@ -1620,9 +1620,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type UpdateFaucetLimitsMutationResult = NonNullable<Awaited<ReturnType<typeof updateFaucetLimits>>>
-    export type UpdateFaucetLimitsMutationBody = BodyType<UpdateFaucetLimitsBody>
+    export type UpdateFaucetLimitsMutationBody = BodyType<FaucetLimitsUpdateInput>
     export type UpdateFaucetLimitsMutationError = ErrorType<unknown>
-    export type UpdateFaucetLimitsMutationVariables = {data: BodyType<UpdateFaucetLimitsBody>}
+    export type UpdateFaucetLimitsMutationVariables = {data: BodyType<FaucetLimitsUpdateInput>}
 
     /**
  * @summary Update faucet limits

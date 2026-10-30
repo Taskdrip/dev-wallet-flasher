@@ -6,7 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface AutoAccumulateBody {
+export interface AutoAccumulateInput {
   network: string;
   enabled: boolean;
 }

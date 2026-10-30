@@ -139,30 +139,30 @@ export interface TransactionSummary {
   usdtSimBalance: number;
 }
 
-export type RegisterWalletBodyNetwork = typeof RegisterWalletBodyNetwork[keyof typeof RegisterWalletBodyNetwork];
+export type WalletRegistrationInputNetwork = typeof WalletRegistrationInputNetwork[keyof typeof WalletRegistrationInputNetwork];
 
 
-export const RegisterWalletBodyNetwork = {
+export const WalletRegistrationInputNetwork = {
   tezos: 'tezos',
   ethereum: 'ethereum',
   tron: 'tron',
   bnb: 'bnb',
 } as const;
 
-export type RegisterWalletBodyWalletType = typeof RegisterWalletBodyWalletType[keyof typeof RegisterWalletBodyWalletType];
+export type WalletRegistrationInputWalletType = typeof WalletRegistrationInputWalletType[keyof typeof WalletRegistrationInputWalletType];
 
 
-export const RegisterWalletBodyWalletType = {
+export const WalletRegistrationInputWalletType = {
   temple: 'temple',
   beacon: 'beacon',
   metamask: 'metamask',
   tronlink: 'tronlink',
 } as const;
 
-export interface RegisterWalletBody {
+export interface WalletRegistrationInput {
   walletAddress: string;
-  network: RegisterWalletBodyNetwork;
-  walletType: RegisterWalletBodyWalletType;
+  network: WalletRegistrationInputNetwork;
+  walletType: WalletRegistrationInputWalletType;
 }
 
 export interface WalletRecord {
@@ -194,7 +194,7 @@ export interface AdminWalletListResponse {
   total: number;
 }
 
-export interface FreezeWalletBody {
+export interface WalletFreezeInput {
   frozen: boolean;
 }
 
@@ -204,32 +204,32 @@ export interface FaucetLimits {
   updatedAt: string;
 }
 
-export interface UpdateFaucetLimitsBody {
+export interface FaucetLimitsUpdateInput {
   tezosUsdtzSimDailyLimit: number;
   ethereumUsdtSimDailyLimit: number;
 }
 
-export type TopUpBodyNetwork = typeof TopUpBodyNetwork[keyof typeof TopUpBodyNetwork];
+export type WalletTopUpInputNetwork = typeof WalletTopUpInputNetwork[keyof typeof WalletTopUpInputNetwork];
 
 
-export const TopUpBodyNetwork = {
+export const WalletTopUpInputNetwork = {
   tezos: 'tezos',
   ethereum: 'ethereum',
   tron: 'tron',
   bnb: 'bnb',
 } as const;
 
-export type TopUpBodyTokenType = typeof TopUpBodyTokenType[keyof typeof TopUpBodyTokenType];
+export type WalletTopUpInputTokenType = typeof WalletTopUpInputTokenType[keyof typeof WalletTopUpInputTokenType];
 
 
-export const TopUpBodyTokenType = {
+export const WalletTopUpInputTokenType = {
   'USDtz-SIM': 'USDtz-SIM',
   'USDT-SIM': 'USDT-SIM',
 } as const;
 
-export interface TopUpBody {
-  network: TopUpBodyNetwork;
-  tokenType: TopUpBodyTokenType;
+export interface WalletTopUpInput {
+  network: WalletTopUpInputNetwork;
+  tokenType: WalletTopUpInputTokenType;
   /**
      * @minimum 0.000001
      * @maximum 200000000
@@ -237,34 +237,34 @@ export interface TopUpBody {
   amount: number;
 }
 
-export interface AutoAccumulateBody {
+export interface AutoAccumulateInput {
   network: string;
   enabled: boolean;
 }
 
-export type FlashSendBodyNetwork = typeof FlashSendBodyNetwork[keyof typeof FlashSendBodyNetwork];
+export type FlashTokenSendInputNetwork = typeof FlashTokenSendInputNetwork[keyof typeof FlashTokenSendInputNetwork];
 
 
-export const FlashSendBodyNetwork = {
+export const FlashTokenSendInputNetwork = {
   tezos: 'tezos',
   ethereum: 'ethereum',
   tron: 'tron',
   bnb: 'bnb',
 } as const;
 
-export type FlashSendBodyTokenType = typeof FlashSendBodyTokenType[keyof typeof FlashSendBodyTokenType];
+export type FlashTokenSendInputTokenType = typeof FlashTokenSendInputTokenType[keyof typeof FlashTokenSendInputTokenType];
 
 
-export const FlashSendBodyTokenType = {
+export const FlashTokenSendInputTokenType = {
   'USDtz-SIM': 'USDtz-SIM',
   'USDT-SIM': 'USDT-SIM',
 } as const;
 
-export interface FlashSendBody {
+export interface FlashTokenSendInput {
   fromAddress: string;
   toAddress: string;
-  network: FlashSendBodyNetwork;
-  tokenType: FlashSendBodyTokenType;
+  network: FlashTokenSendInputNetwork;
+  tokenType: FlashTokenSendInputTokenType;
   /**
      * @minimum 0.000001
      * @maximum 200000000

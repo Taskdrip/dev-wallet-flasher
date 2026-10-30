@@ -5,14 +5,14 @@
  * Dev Wallet Connector API
  * OpenAPI spec version: 0.1.0
  */
-import type { FlashSendBodyNetwork } from './flashSendBodyNetwork';
-import type { FlashSendBodyTokenType } from './flashSendBodyTokenType';
+import type { FlashTokenSendInputNetwork } from './flashTokenSendInputNetwork';
+import type { FlashTokenSendInputTokenType } from './flashTokenSendInputTokenType';
 
-export interface FlashSendBody {
+export interface FlashTokenSendInput {
   fromAddress: string;
   toAddress: string;
-  network: FlashSendBodyNetwork;
-  tokenType: FlashSendBodyTokenType;
+  network: FlashTokenSendInputNetwork;
+  tokenType: FlashTokenSendInputTokenType;
   /**
      * @minimum 0.000001
      * @maximum 200000000

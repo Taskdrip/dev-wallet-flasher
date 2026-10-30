@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { isAvailable as isTempleAvailable, requestPermission as requestTemplePermission } from '@temple-wallet/dapp';
 import { useRegisterWallet } from '@workspace/api-client-react';
 import { useLocation } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
@@ -102,76 +103,55 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
   const registerWallet = useRegisterWallet();
 
   const handleConnect = async (addr: string, net: Network, type: WalletType) => {
+    await registerWallet.mutateAsync({
+      data: {
+        walletAddress: addr,
+        network: net,
+        walletType: type,
+      },
+    });
     setAddress(addr);
     setNetwork(net);
     setWalletType(type);
-
-    try {
-      await registerWallet.mutateAsync({
-        data: {
-          walletAddress: addr,
-          network: net as 'tezos' | 'ethereum',
-          walletType: type as 'temple' | 'beacon' | 'metamask',
-        },
-      });
-      setLocation('/dashboard');
-      toast({
-        title: 'Wallet connected',
-        description: `Connected to ${net} network successfully.`,
-      });
-    } catch (error) {
-      console.error('Failed to register wallet', error);
-    }
+    setLocation('/dashboard');
+    toast({
+      title: 'Wallet connected',
+      description: `Connected to ${net} test network successfully.`,
+    });
   };
 
   const connectMetaMask = async (chain: ChainConfig) => {
     if (typeof window === 'undefined' || !window.ethereum) {
-      toast({
-        variant: 'destructive',
-        title: 'Wallet not found',
-        description: `Please install MetaMask to connect to ${chain.name}.`,
-      });
-      return;
+      throw new Error(`Install MetaMask to connect to ${chain.name}.`);
     }
-    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' }) as string[];
-    if (accounts && accounts.length > 0) {
-      await handleConnect(accounts[0], chain.id, 'metamask');
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    if (!Array.isArray(accounts) || typeof accounts[0] !== 'string' || !accounts[0]) {
+      throw new Error('MetaMask did not return an account. Unlock it and try again.');
     }
+    await handleConnect(accounts[0], chain.id, 'metamask');
   };
 
   const connectTronLink = async (chain: ChainConfig) => {
-    if (typeof window !== 'undefined' && window.tronLink) {
-      try {
-        const result = await window.tronLink.request({ method: 'tron_requestAccounts' });
-        if (result.code === 200 && window.tronWeb?.defaultAddress?.base58) {
-          await handleConnect(window.tronWeb.defaultAddress.base58, chain.id, 'tronlink');
-          return;
-        }
-      } catch {
-        // fall through to mock
-      }
+    if (typeof window === 'undefined' || !window.tronLink) {
+      throw new Error('Install the TronLink wallet extension to connect to Tron Nile.');
     }
-    // Mock Tron address for testnet
-    await new Promise<void>((r) => setTimeout(r, 1000));
-    await handleConnect('TJYmBQGr7sCXFiB5MXqf3qzqhB5B3yJWqh', chain.id, 'tronlink');
+    const result = await window.tronLink.request({ method: 'tron_requestAccounts' });
+    const address = window.tronWeb?.defaultAddress?.base58;
+    if (result.code !== 200 || !address) {
+      throw new Error('TronLink did not return an account. Unlock it and try again.');
+    }
+    await handleConnect(address, chain.id, 'tronlink');
   };
 
   const connectTemple = async (chain: ChainConfig) => {
-    const isTempleAvailable =
-      typeof window !== 'undefined' &&
-      typeof (window as Record<string, unknown>).temple !== 'undefined';
-
-    if (isTempleAvailable) {
-      const templeWallet = (window as Record<string, { connect?: (n: string) => Promise<void>; pkh?: () => Promise<string> }>).temple;
-      if (templeWallet.connect) await templeWallet.connect('ghostnet');
-      const addr = templeWallet.pkh ? await templeWallet.pkh() : null;
-      if (addr) {
-        await handleConnect(addr, chain.id, 'temple');
-        return;
-      }
+    if (!(await isTempleAvailable())) {
+      throw new Error('Install the Temple Wallet extension to connect to Tezos Ghostnet.');
     }
-    await new Promise<void>((r) => setTimeout(r, 1200));
-    await handleConnect('tz1VSUr8GL1ScaXhBvT2M8tT5r61H4hTbxuJ', chain.id, 'temple');
+    const permission = await requestTemplePermission(
+      'ghostnet',
+      { name: 'Dev Wallet Connector' },
+    );
+    await handleConnect(permission.pkh, chain.id, 'temple');
   };
 
   const connectWallet = async (chain: ChainConfig) => {
@@ -190,7 +170,9 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
       toast({
         variant: 'destructive',
         title: 'Connection failed',
-        description: `Could not connect to ${chain.name}. Please try again.`,
+        description: error instanceof Error
+          ? error.message
+          : `Could not connect to ${chain.name}. Please try again.`,
       });
     } finally {
       setIsConnecting(false);

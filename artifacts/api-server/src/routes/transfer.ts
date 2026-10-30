@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { walletsTable, transactionsTable } from "@workspace/db/schema";
-import { FlashSendBody, TransferTokensBody } from "@workspace/api-zod";
+import { SendFlashTokenBody, TransferTokensBody } from "@workspace/api-zod";
 import { eq, and, sql } from "drizzle-orm";
 import crypto from "crypto";
 
@@ -110,7 +110,7 @@ router.post("/transfer", async (req, res) => {
 });
 
 router.post("/flash/send", async (req, res) => {
-  const parsedBody = FlashSendBody.safeParse(req.body);
+  const parsedBody = SendFlashTokenBody.safeParse(req.body);
   if (!parsedBody.success) {
     res.status(400).json({ error: parsedBody.error.issues[0]?.message ?? "Invalid flash send request" });
     return;
